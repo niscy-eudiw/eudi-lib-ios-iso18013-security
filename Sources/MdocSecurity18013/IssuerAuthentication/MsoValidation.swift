@@ -31,7 +31,8 @@ extension IssuerSigned {
             [
                 { if $0.docType == docType { nil } else { [.docTypeNotMatches] } },
                 { if DigestAlgorithmKind(rawValue: $0.digestAlgorithm) != nil { nil } else { [.unsupportedDigestAlgorithm($0.digestAlgorithm)] } },
-                { self.validateDigestValues(mso: $0) }
+                { self.validateDigestValues(mso: $0) },
+                { _ in self.validateMsoSignature() }
             ]
         let errors: [MsoValidationError] = msoValidationRules.compactMap { $0(issuerAuth.mso) }.flatMap { $0 }
         return (errors.isEmpty, errors)
@@ -51,6 +52,36 @@ extension IssuerSigned {
             }
         }
         return if errorList.isEmpty {nil } else { errorList }
+    }
+
+    func validateMsoSignature() -> [MsoValidationError]? {
+        // Verify the MSO signature using the issuer certificate
+        guard !issuerAuth.iaca.isEmpty else {
+            return [.signatureVerificationFailed("No issuer certificates provided")]
+        }
+        
+        // Get the first certificate from the chain (the issuer certificate)
+        let issuerCertData = Data(issuerAuth.iaca[0])
+        
+        // Extract the public key from the certificate
+        guard let publicKey = SecurityHelpers.getPublicKeyx963(publicCertData: issuerCertData) else {
+            return [.signatureVerificationFailed("Failed to extract public key from issuer certificate")]
+        }
+        
+        // Create a COSE structure for validation
+        let cose = Cose(type: .sign1, algorithm: issuerAuth.verifyAlgorithm.rawValue, signature: issuerAuth.signature)
+        
+        // Validate the signature
+        do {
+            let isValid = try cose.validateDetachedCoseSign1(payloadData: Data(issuerAuth.msoRawData), publicKey_x963: publicKey)
+            if !isValid {
+                return [.signatureVerificationFailed("Signature validation failed")]
+            }
+        } catch {
+            return [.signatureVerificationFailed("Signature validation error: \(error.localizedDescription)")]
+        }
+        
+        return nil
     }
 
 }

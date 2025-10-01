@@ -25,6 +25,7 @@ public enum MsoValidationError: LocalizedError, Sendable {
     case unsupportedDigestAlgorithm(String)
     case missingDigestValues(namespace: String, elementIdentifiers: [String])
     case invalidDigestValues(namespace: String, elementIdentifiers: [String])
+    case signatureVerificationFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -36,6 +37,8 @@ public enum MsoValidationError: LocalizedError, Sendable {
             return NSLocalizedString("The digest values are missing for namespace '\(namespace)' elements \(elementIdentifiers.joined(separator: ", "))", comment: "MsoValidationError")
         case .invalidDigestValues(let namespace, let elementIdentifiers):
             return NSLocalizedString("The digest values for namespace '\(namespace)' elements \(elementIdentifiers.joined(separator: ", ")) are invalid.", comment: "MsoValidationError")
+        case .signatureVerificationFailed(let reason):
+            return NSLocalizedString("The MSO signature verification failed: \(reason)", comment: "MsoValidationError")
         }
     }
 }
