@@ -26,7 +26,7 @@ public actor SampleDataSecureArea: SecureArea {
     public let storage: any SecureKeyStorage
     private var x963Key: Data?
 
-    init(storage: any SecureKeyStorage, x963Key: Data? = nil) {
+    public init(storage: any SecureKeyStorage, x963Key: Data? = nil) {
         self.storage = storage
         self.x963Key = x963Key
     }
