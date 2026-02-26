@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         // .package(path: "../eudi-lib-ios-iso18013-data-model"),
-        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git", exact: "0.9.2"),
+        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git", exact: "0.10.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
     ],
@@ -22,11 +22,14 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "MdocSecurity18013", dependencies: [
+            name: "MdocSecurity18013",
+            dependencies: [
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
                  .product(name: "Logging", package: "swift-log"),
                  .product(name: "X509", package: "swift-certificates"),
-                ]),
+            ],
+            //swiftSettings: [.enableUpcomingFeature("InferIsolatedConformances"), .enableUpcomingFeature("NonisolatedNonsendingByDefault")],
+        ),
         .testTarget(
             name: "MdocSecurity18013Tests",
             dependencies: ["MdocSecurity18013"],
