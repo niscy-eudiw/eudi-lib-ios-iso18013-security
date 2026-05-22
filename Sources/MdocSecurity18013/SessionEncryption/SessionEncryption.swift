@@ -35,8 +35,8 @@ public struct SessionEncryption: Sendable {
 	var errorCode: UInt?
 	static let IDENTIFIER0: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 	static let IDENTIFIER1: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-	var encryptionIdentifier: [UInt8] { sessionRole == .reader ? Self.IDENTIFIER0 : Self.IDENTIFIER1 }
-	var decryptionIdentifier: [UInt8] { sessionRole == .reader ? Self.IDENTIFIER1 : Self.IDENTIFIER0 }
+	var encryptionIdentifier: [UInt8] { Self.IDENTIFIER1 }
+	var decryptionIdentifier: [UInt8] { Self.IDENTIFIER0 }
 	public var sessionKeys: CoseKeyExchange
 	var deviceEngagementRawData: [UInt8]
 	let eReaderKeyRawData: [UInt8]
@@ -102,7 +102,7 @@ public struct SessionEncryption: Sendable {
 		let symmetricKeyForEncrypt = try await makeKeyAgreementAndDeriveSessionKey(isEncrypt: true)
 		let sealedBox = try AES.GCM.seal(data, using: symmetricKeyForEncrypt, nonce: nonce)
 		guard let encryptedContent = sealedBox.combined else { return nil }
-		if sessionRole == .mdoc { sessionCounter += 1 }
+		sessionCounter += 1
 		return [UInt8](encryptedContent.dropFirst(12))
 	}
 
@@ -130,9 +130,9 @@ public struct SessionEncryption: Sendable {
 
 	func getInfo(isEncrypt: Bool) -> String {
 		if isEncrypt {
-			return sessionRole == .mdoc ? "SKDevice" : "SKReader"
+			return "SKDevice"
 		}
-		return sessionRole == .mdoc ? "SKReader" : "SKDevice"
+		return "SKReader"
 	}
 
 	/// Session keys are derived using ECKA-DH (Elliptic Curve Key Agreement
