@@ -27,7 +27,7 @@ import MdocDataModel18013
   public struct DeviceAuthentication: Sendable {
     let sessionTranscript: SessionTranscript
     let docType: String
-    let deviceNameSpacesRawData: [UInt8]
+    let deviceNameSpaces: DeviceNameSpaces?
   }
 
   extension DeviceAuthentication: CBOREncodable {
@@ -35,8 +35,8 @@ import MdocDataModel18013
         let authenticationLabel = CBOR.utf8String("DeviceAuthentication")
         let transcriptCbor = sessionTranscript.toCBOR(options: options)
         let documentType = CBOR.utf8String(docType)
-        let taggedNameSpaces = deviceNameSpacesRawData.taggedEncoded
-        return .array([authenticationLabel, transcriptCbor, documentType, taggedNameSpaces])
+        let nameSpaces = deviceNameSpaces != nil ? deviceNameSpaces.encode(options: options) : [0xA0]
+        return .array([authenticationLabel, transcriptCbor, documentType, nameSpaces.taggedEncoded])
       }
   }
 

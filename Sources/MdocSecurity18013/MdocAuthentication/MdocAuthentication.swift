@@ -65,14 +65,14 @@ public struct MdocAuthentication: Sendable {
 	/// - Returns: DeviceAuth instance
     public func getDeviceAuthForTransfer(
         docType: String,
-        deviceNameSpacesRawData: [UInt8] = [0xA0],
         dauthMethod: DeviceAuthMethod,
+        deviceNameSpaces: DeviceNameSpaces?,
         unlockData: Data?
     ) async throws -> DeviceAuth? {
 		let deviceAuthentication = DeviceAuthentication(
 			sessionTranscript: sessionTranscript,
 			docType: docType,
-			deviceNameSpacesRawData: deviceNameSpacesRawData
+			deviceNameSpaces: deviceNameSpaces
 		)
 		let contentBytes = deviceAuthentication.toCBOR(options: CBOROptions())
 			.taggedEncoded
