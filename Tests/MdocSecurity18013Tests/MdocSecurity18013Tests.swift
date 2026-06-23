@@ -116,7 +116,7 @@ struct MdocSecurity18013Tests {
 		for docR in dr.docRequests {
 			let mdocAuth = MdocReaderAuthentication(transcript: sessionEncr.sessionTranscript)
 			guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
-			let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: [])
+            let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: [], crlRevocationPolicy: .hardFail)
 			#expect(!b, "Current date not in validity period of Certificate")
             print(message ?? "")
 		}
@@ -131,7 +131,7 @@ struct MdocSecurity18013Tests {
 		for docR in dr.docRequests {
 			let mdocAuth = MdocReaderAuthentication(transcript: sessionEncr.sessionTranscript)
 			guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
-			let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: rootIaca)
+			let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: rootIaca, crlRevocationPolicy: .hardFail)
 			#expect(!b, "Current date not in validity period of Certificate")
             print(message ?? "")
 		}

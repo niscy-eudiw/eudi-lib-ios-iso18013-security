@@ -53,7 +53,8 @@ public class SecurityHelpers {
 	public static func isMdocX5cValid(
 		secCerts: x5chain,
 		usage: CertificateUsage,
-		rootIaca: [x5chain]
+		revocationPolicy: RevocationPolicy,
+		rootIaca: [x5chain],
 	) -> (isValid: Bool, validationMessages: [String], rootCert: SecCertificate?) {
 		guard let secCert = secCerts.first else { return (false, ["Certificate not found"], nil) }
 		// convert to swift-certificates object
@@ -113,7 +114,7 @@ public class SecurityHelpers {
 						return (false, ["Issuer data rfc822Name or uniformResourceIdentifier do not match with root cert."], nil)
 					}
 				}
-				guard let bs = fetchCRLSerialNumbers(x509root, revocationPolicy: .hardFail, messages: &messages) else {
+				guard let bs = fetchCRLSerialNumbers(x509root, revocationPolicy: revocationPolicy, messages: &messages) else {
 					return (false, ["CRL revocation check failed"], nil)
 				}
 				if bs.contains(x509cert.serialNumber) { return (false, ["Revoked issued Certificate"], rootCert)}
