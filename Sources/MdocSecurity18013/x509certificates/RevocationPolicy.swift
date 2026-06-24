@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 /// CRL Revocation Policy
-public enum RevocationPolicy {
+public enum RevocationPolicy: Sendable {
     case warning
     case hardFail
 }
