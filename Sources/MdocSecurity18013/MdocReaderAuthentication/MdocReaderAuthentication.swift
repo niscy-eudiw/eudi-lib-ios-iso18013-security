@@ -39,7 +39,8 @@ public struct MdocReaderAuthentication: Sendable {
 		readerAuthCBOR: CBOR,
 		readerAuthX5c: [Data],
 		itemsRequestRawData: [UInt8],
-		rootIaca: [x5chain]
+		rootIaca: [x5chain],
+		crlRevocationPolicy: RevocationPolicy
 	) throws -> (Bool, String?) {
 		let readerAuthentication = ReaderAuthentication(
 			sessionTranscript: transcript,
@@ -66,6 +67,7 @@ public struct MdocReaderAuthentication: Sendable {
 		let certificateValidation = SecurityHelpers.isMdocX5cValid(
 			secCerts: secCerts,
 			usage: .mdocReaderAuth,
+			revocationPolicy: crlRevocationPolicy,
 			rootIaca: rootIaca
 		)
 		if !certificateValidation.isValid {
