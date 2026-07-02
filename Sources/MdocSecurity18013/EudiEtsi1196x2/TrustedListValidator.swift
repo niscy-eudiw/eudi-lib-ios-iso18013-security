@@ -50,7 +50,7 @@ public struct TrustedListValidator: @unchecked Sendable {
         urls.wrpacProviders  = urlConfig[EtsiListProvider.wrpac]
         urls.wrprcProviders  = urlConfig[EtsiListProvider.wrprc]
         urls.mdlProviders    = urlConfig[EtsiListProvider.mdl]
-        let verifyJwtSignature: VerifyJwtSignature = InsecureAcceptAllJwtSignature.shared
+        let verifyJwtSignature: VerifyJwtSignature = x5cVerifyJwtSignature.shared
         validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
     }
     
