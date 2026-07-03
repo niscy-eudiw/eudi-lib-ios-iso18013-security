@@ -17,7 +17,7 @@ limitations under the License.
 import EudiEtsi1196x2
 
 /// The verification contexts the EUDI Reference Implementation environment exposes.
-public enum EtsiListProvider: String, CaseIterable, Identifiable {
+public enum EtsiContextType: String, CaseIterable, Identifiable {
     case pid = "PID"
     case mdl = "mDL"
     case wallet = "Wallet"
