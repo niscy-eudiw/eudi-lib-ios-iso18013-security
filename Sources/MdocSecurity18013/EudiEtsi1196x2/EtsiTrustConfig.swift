@@ -25,9 +25,8 @@ import EudiEtsi1196x2
 public struct EtsiTrustConfig: @unchecked Sendable {
     /// The LoTE download locations (e.g., PID, PubEAA, WRPAC provider URLs).
     public let loteLocations: SupportedLists<NSString>
-    /// The verification context this configuration validates certificate chains against
-    /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
-    public let verificationContext: VerificationContext
+    // verification context mappings
+    public let contextTypeMappings: EtsiContextTypeMappings?
     /// How long downloaded LoTE files are cached on disk (default: 24 hours).
     // public let fileCacheExpiration: TimeInterval
     /// How long the in-memory trust anchor cache is valid (default: 20 minutes).
@@ -52,7 +51,7 @@ public struct EtsiTrustConfig: @unchecked Sendable {
 
     public init(
         loteLocations: SupportedLists<NSString>,
-        verificationContext: VerificationContext,
+        contextTypeMappings: EtsiContextTypeMappings? = nil,
         //fileCacheExpiration: TimeInterval = EtsiTrustConfig.defaultFileCacheExpiration,
         cacheTtl: TimeInterval = EtsiTrustConfig.defaultCacheTtl,
         //relaxCertificateProfiles: Bool = false,
@@ -61,7 +60,7 @@ public struct EtsiTrustConfig: @unchecked Sendable {
         loteConstraints: any LoadLoTEAndPointersConstraints = LoadLoTEAndPointersConstraintsDoNotLoadOtherPointers.shared
     ) {
         self.loteLocations = loteLocations
-        self.verificationContext = verificationContext
+        self.contextTypeMappings = contextTypeMappings
         //self.fileCacheExpiration = fileCacheExpiration
         self.cacheTtl = cacheTtl
         //self.relaxCertificateProfiles = relaxCertificateProfiles
@@ -70,23 +69,6 @@ public struct EtsiTrustConfig: @unchecked Sendable {
         self.loteConstraints = loteConstraints
     }
 
-    /// Returns a copy of this configuration with `verificationContext` replaced; all other
-    /// settings are preserved.
-    public func withContext(_ verificationContext: VerificationContext) -> Self {
-        Self(
-            loteLocations: loteLocations,
-            verificationContext: verificationContext,
-            cacheTtl: cacheTtl,
-            customJwtSignatureVerifier: customJwtSignatureVerifier,
-            loteConstraints: loteConstraints
-        )
-    }
-
-    /// Returns a copy of this configuration validating against `context`'s verification context;
-    /// all other settings are preserved.
-    public func withContext(_ context: EtsiContextType) -> Self {
-        withContext(context.verificationContext)
-    }
 }
 
 // MARK: - Ready-made environment presets
@@ -94,7 +76,6 @@ public struct EtsiTrustConfig: @unchecked Sendable {
 extension EtsiTrustConfig {
     /// LoTE trust lists for the EC DIGIT acceptance environment (PID, Wallet, WRPAC, mDL).
     ///
-    /// Chains are validated against the WRPAC context — the Wallet Relying Party access
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.
     public static var digi: Self { Self(loteLocations: SupportedLists<NSString>(
                 pidProviders: DIGITTrustLists.pidProviders as NSString,
@@ -104,15 +85,13 @@ extension EtsiTrustConfig {
                 pubEaaProviders: nil,
                 qeaProviders: nil,
                 eaaProviders: [EudiwIosTrust.shared.mdlUseCase: DIGITTrustLists.mdlProviders as NSString]
-            ),
-            verificationContext: EtsiContextType.wrpac.verificationContext
+            )
         )
     }
 
     /// LoTE trust lists for the EUDI Wallet Reference Implementation environment
     /// (PID, Wallet, WRPAC, WRPRC; no mDL list is published there).
     ///
-    /// Chains are validated against the WRPAC context — the Wallet Relying Party access
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.
     public static var eudiRef: Self {Self(loteLocations: SupportedLists<NSString>(
                 pidProviders: EUDIRefImplLists.pidProviders as NSString,
@@ -122,8 +101,7 @@ extension EtsiTrustConfig {
                 pubEaaProviders: nil,
                 qeaProviders: nil,
                 eaaProviders: [:]
-            ),
-            verificationContext: EtsiContextType.wrpac.verificationContext
+            )
         )
     }
 }

@@ -19,9 +19,8 @@ import EudiEtsi1196x2
 
 public struct EtsiTrustManager: @unchecked Sendable {
     let validator: CachedTrustValidator
-    /// The single verification context this manager validates certificate chains against.
-    let verificationContext: VerificationContext
-
+    let contextTypeMappings: EtsiContextTypeMappings?
+    var currentDocType: String?
     /// Builds a cached LoTE-based trust validator from `config`.
     ///
     /// - Note: Only a subset of `EtsiTrustConfig` is applied. The validator is built through
@@ -35,19 +34,30 @@ public struct EtsiTrustManager: @unchecked Sendable {
     public init(config: EtsiTrustConfig) {
         let lists = config.loteLocations
         let urls = TrustListUrls()
-        urls.pidProviders    = lists.pidProviders as String?
+        urls.pidProviders = lists.pidProviders as String?
         urls.walletProviders = lists.walletProviders as String?
-        urls.wrpacProviders  = lists.wrpacProviders as String?
-        urls.wrprcProviders  = lists.wrprcProviders as String?
+        urls.wrpacProviders = lists.wrpacProviders as String?
+        urls.wrprcProviders = lists.wrprcProviders as String?
         urls.pubEaaProviders = lists.pubEaaProviders as String?
-        urls.qeaProviders    = lists.qeaProviders as String?
-        urls.mdlProviders    = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
+        urls.qeaProviders = lists.qeaProviders as String?
+        urls.mdlProviders = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
 
         let verifyJwtSignature: VerifyJwtSignature = config.customJwtSignatureVerifier ?? x5cVerifyJwtSignature.shared
         let ttlHours = config.cacheTtl / 3600
         validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
-        verificationContext = config.verificationContext
+        contextTypeMappings = config.contextTypeMappings
     }
+    
+    
+    /// The verification context this configuration validates certificate chains against
+    /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
+    public var verificationContext: any VerificationContext {
+        if let contextTypeMappings, let currentDocType, let contextType = contextTypeMappings[currentDocType] {
+            return contextType.verificationContext
+        }
+        return EtsiContextType.wrpac.verificationContext
+    }
+  
 
     /// Trust manager for the EC DIGIT acceptance environment.
     public static let digi: Self = Self(config: .digi)

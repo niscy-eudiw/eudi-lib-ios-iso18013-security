@@ -15,9 +15,10 @@ limitations under the License.
 */
 
 import EudiEtsi1196x2
+import OrderedCollections
 
 /// The verification contexts the EUDI Reference Implementation environment exposes.
-public enum EtsiContextType: String, CaseIterable, Identifiable {
+public enum EtsiContextType: String, CaseIterable, Identifiable, Sendable {
     case pid = "PID"
     case mdl = "mDL"
     case wallet = "Wallet"
@@ -35,4 +36,10 @@ public enum EtsiContextType: String, CaseIterable, Identifiable {
         case .mdl: return VerificationContextEAA(useCase: EudiwIosTrust.shared.mdlUseCase)
         }
     }
+}
+
+public typealias EtsiContextTypeMappings = OrderedDictionary<String, EtsiContextType>
+
+public extension OrderedDictionary where Key == String, Value == EtsiContextType {
+    static let `default`: Self = ["eu.europa.ec.eudi.pid.1": .pid, "urn:eudi:pid:1": .pid, "org.iso.18013.5.1.mDL": .mdl]
 }
