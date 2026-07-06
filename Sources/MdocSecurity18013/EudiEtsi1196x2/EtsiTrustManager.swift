@@ -59,23 +59,18 @@ public struct EtsiTrustManager: @unchecked Sendable {
 // MARK: - ReaderTrustStore
 
 extension EtsiTrustManager: ReaderTrustStore {
-    public func createCertificationTrustPath(chain: [SecCertificate]) async -> [SecCertificate]? {
-        let derChain = chain.map { SecCertificateCopyData($0) as Data }
-        guard let result = await validate(derChain: derChain), result.isTrusted else { return nil }
-
+    public func createCertificationTrustPath(chain: [Data]) async -> [Data]? {
+        guard let result = await validate(derChain: chain), result.isTrusted else { return nil }
         // Append the matched trust anchor to complete the path when it is not already present.
         var path = chain
-        if let anchorData = result.matchedAnchor,
-           !derChain.contains(anchorData),
-           let anchorCert = SecCertificateCreateWithData(nil, anchorData as CFData) {
-            path.append(anchorCert)
+        if let anchorData = result.matchedAnchor, !chain.contains(anchorData) {
+            path.append(anchorData)
         }
         return path
     }
 
-    public func validateCertificationTrustPath(chainToDocumentSigner: [SecCertificate]) async -> Bool {
-        let derChain = chainToDocumentSigner.map { SecCertificateCopyData($0) as Data }
-        return await validate(derChain: derChain)?.isTrusted ?? false
+    public func validateCertificationTrustPath(chainToDocumentSigner: [Data]) async -> Bool {
+        await validate(derChain: chainToDocumentSigner)?.isTrusted ?? false
     }
 
     /// Runs the async ETSI validator. Returns `nil` if validation throws or the context is

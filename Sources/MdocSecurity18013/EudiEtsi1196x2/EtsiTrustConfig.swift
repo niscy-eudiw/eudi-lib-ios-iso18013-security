@@ -29,13 +29,13 @@ public struct EtsiTrustConfig: @unchecked Sendable {
     /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
     public let verificationContext: VerificationContext
     /// How long downloaded LoTE files are cached on disk (default: 24 hours).
-    public let fileCacheExpiration: TimeInterval
+    // public let fileCacheExpiration: TimeInterval
     /// How long the in-memory trust anchor cache is valid (default: 20 minutes).
     public let cacheTtl: TimeInterval
     /// Whether to strip end-entity profile constraints (for DEV/testing).
-    public let relaxCertificateProfiles: Bool
+    // public let relaxCertificateProfiles: Bool
     /// Whether to disable PKIX revocation checking (for DEV/testing).
-    public let relaxPkixRevocation: Bool
+    // public let relaxPkixRevocation: Bool
     /// Optional custom JWT signature verifier for LoTE JWTs; when `nil`, the core uses
     /// its built-in verifier.
     public let customJwtSignatureVerifier: (any VerifyJwtSignature)?
@@ -53,21 +53,39 @@ public struct EtsiTrustConfig: @unchecked Sendable {
     public init(
         loteLocations: SupportedLists<NSString>,
         verificationContext: VerificationContext,
-        fileCacheExpiration: TimeInterval = EtsiTrustConfig.defaultFileCacheExpiration,
+        //fileCacheExpiration: TimeInterval = EtsiTrustConfig.defaultFileCacheExpiration,
         cacheTtl: TimeInterval = EtsiTrustConfig.defaultCacheTtl,
-        relaxCertificateProfiles: Bool = false,
-        relaxPkixRevocation: Bool = false,
+        //relaxCertificateProfiles: Bool = false,
+        //relaxPkixRevocation: Bool = false,
         customJwtSignatureVerifier: (any VerifyJwtSignature)? = nil,
         loteConstraints: any LoadLoTEAndPointersConstraints = LoadLoTEAndPointersConstraintsDoNotLoadOtherPointers.shared
     ) {
         self.loteLocations = loteLocations
         self.verificationContext = verificationContext
-        self.fileCacheExpiration = fileCacheExpiration
+        //self.fileCacheExpiration = fileCacheExpiration
         self.cacheTtl = cacheTtl
-        self.relaxCertificateProfiles = relaxCertificateProfiles
-        self.relaxPkixRevocation = relaxPkixRevocation
+        //self.relaxCertificateProfiles = relaxCertificateProfiles
+        //self.relaxPkixRevocation = relaxPkixRevocation
         self.customJwtSignatureVerifier = customJwtSignatureVerifier
         self.loteConstraints = loteConstraints
+    }
+
+    /// Returns a copy of this configuration with `verificationContext` replaced; all other
+    /// settings are preserved.
+    public func withContext(_ verificationContext: VerificationContext) -> Self {
+        Self(
+            loteLocations: loteLocations,
+            verificationContext: verificationContext,
+            cacheTtl: cacheTtl,
+            customJwtSignatureVerifier: customJwtSignatureVerifier,
+            loteConstraints: loteConstraints
+        )
+    }
+
+    /// Returns a copy of this configuration validating against `context`'s verification context;
+    /// all other settings are preserved.
+    public func withContext(_ context: EtsiContextType) -> Self {
+        withContext(context.verificationContext)
     }
 }
 
@@ -78,9 +96,7 @@ extension EtsiTrustConfig {
     ///
     /// Chains are validated against the WRPAC context — the Wallet Relying Party access
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.
-    public static var digi: EtsiTrustConfig {
-        EtsiTrustConfig(
-            loteLocations: SupportedLists<NSString>(
+    public static var digi: Self { Self(loteLocations: SupportedLists<NSString>(
                 pidProviders: DIGITTrustLists.pidProviders as NSString,
                 walletProviders: DIGITTrustLists.walletProviders as NSString,
                 wrpacProviders: DIGITTrustLists.wrpacProviders as NSString,
@@ -98,9 +114,7 @@ extension EtsiTrustConfig {
     ///
     /// Chains are validated against the WRPAC context — the Wallet Relying Party access
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.
-    public static var eudiRef: EtsiTrustConfig {
-        EtsiTrustConfig(
-            loteLocations: SupportedLists<NSString>(
+    public static var eudiRef: Self {Self(loteLocations: SupportedLists<NSString>(
                 pidProviders: EUDIRefImplLists.pidProviders as NSString,
                 walletProviders: EUDIRefImplLists.walletProviders as NSString,
                 wrpacProviders: EUDIRefImplLists.wrpacProviders as NSString,
