@@ -60,7 +60,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
 
 extension EtsiTrustManager: ReaderTrustStore {
     public func createCertificationTrustPath(chain: [Data]) async -> [Data]? {
-        guard let result = await validate(derChain: chain), result.isTrusted else { return nil }
+        guard let result = await validate(chain: chain), result.isTrusted else { return nil }
         // Append the matched trust anchor to complete the path when it is not already present.
         var path = chain
         if let anchorData = result.matchedAnchor, !chain.contains(anchorData) {
@@ -70,13 +70,13 @@ extension EtsiTrustManager: ReaderTrustStore {
     }
 
     public func validateCertificationTrustPath(chainToDocumentSigner: [Data]) async -> Bool {
-        await validate(derChain: chainToDocumentSigner)?.isTrusted ?? false
+        await validate(chain: chainToDocumentSigner)?.isTrusted ?? false
     }
 
     /// Runs the async ETSI validator. Returns `nil` if validation throws or the context is
     /// unsupported by the validator.
-    private func validate(derChain: [Data]) async -> IosValidationResult? {
-        try? await validator.validate(chain: derChain, context: verificationContext)
+    private func validate(chain: [Data]) async -> IosValidationResult? {
+        try? await validator.validate(chain: chain, context: verificationContext)
     }
 }
 
