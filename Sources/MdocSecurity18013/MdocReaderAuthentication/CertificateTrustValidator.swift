@@ -25,6 +25,9 @@ import Security
 /// should have a specific trust store for each certificate and may implement
 /// specific checks required for the document type.
 public protocol CertificateTrustValidator {
+    /// The document type this validator is currently operating on. Used to resolve the trust context appropriate for the document being validated.
+    var docType: String? { get set }
+
     /// Creates a certification trust path by finding a certificate in the trust store
     /// that is the issuer of a certificate in the certificate chain.
     /// Returns `nil` if no trusted certificate can be found.
@@ -43,11 +46,11 @@ public protocol CertificateTrustValidator {
     /// is trusted if a trusted certificate can be found that has signed any certificate in the
     /// chain. The trusted certificate itself will be validated as well.
     ///
-    /// - Parameter chainToDocumentSigner: the DER-encoded document signer, intermediate
+    /// - Parameter chain: the DER-encoded document signer, intermediate
     ///   certificates and optional root certificate.
     /// - Returns: `false` if no trusted certificate could be found for the certificate chain
     ///   or if the certificate chain is invalid for any reason.
-    func validateCertTrustPath(chainToDocumentSigner: [Data]) async -> Bool
+    func validateCertTrustPath(chain: [Data]) async -> Bool
 }
 
 // MARK: - SecCertificate convenience
@@ -75,6 +78,6 @@ public extension CertificateTrustValidator {
     /// - Returns: `false` if no trusted certificate could be found or the chain is invalid.
     func validateCertTrustPath(chainToDocumentSigner: x5chain) async -> Bool {
         let derChain = chainToDocumentSigner.map { SecCertificateCopyData($0) as Data }
-        return await validateCertTrustPath(chainToDocumentSigner: derChain)
+        return await validateCertTrustPath(chain: derChain)
     }
 }

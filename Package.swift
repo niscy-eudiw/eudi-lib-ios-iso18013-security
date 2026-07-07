@@ -17,7 +17,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.13.1"),
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
-        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", revision: "7497cc20f53fcfe616a52926276ea67a6a3ffa52"),
+        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", revision: "fe25f428471b88e975b6b07814162a2d14abbfe4"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

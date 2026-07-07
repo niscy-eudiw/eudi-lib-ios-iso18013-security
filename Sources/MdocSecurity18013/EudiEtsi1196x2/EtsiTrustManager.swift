@@ -23,7 +23,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
     /// anchors), which the `EudiEtsi1196x2` API exposes through different entry points.
     private let validateChain: ([Data], any VerificationContext) async -> IosValidationResult?
     let contextTypeMappings: EtsiContextTypeMappings?
-    var currentDocType: String?
+    public var docType: String?
 
     /// Builds a trust manager from the selected `TrustConfig`.
     ///
@@ -90,7 +90,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
     /// The verification context this configuration validates certificate chains against
     /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
     public var verificationContext: any VerificationContext {
-        if let contextTypeMappings, let currentDocType, let contextType = contextTypeMappings[currentDocType] {
+        if let contextTypeMappings, let docType, let contextType = contextTypeMappings[docType] {
             return contextType.verificationContext
         }
         return EtsiContextType.wrpac.verificationContext
@@ -117,8 +117,8 @@ extension EtsiTrustManager: CertificateTrustValidator {
         return path
     }
 
-    public func validateCertTrustPath(chainToDocumentSigner: [Data]) async -> Bool {
-        await validate(chain: chainToDocumentSigner)?.isTrusted ?? false
+    public func validateCertTrustPath(chain: [Data]) async -> Bool {
+        await validate(chain: chain)?.isTrusted ?? false
     }
 
     /// Runs the async validator for the configured trust source. Returns `nil` if validation

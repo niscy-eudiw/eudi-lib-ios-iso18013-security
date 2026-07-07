@@ -1,5 +1,5 @@
 {
-  "originHash" : "720cd5efe2f52c8344a08456a0f910e3eb7abfc19dee8e8ca8d7a2e32cd9f5f0",
+  "originHash" : "a43c8261d32c220fb2f4a626b3810e2780cf9f93637cdb5dbacaa6c600d89016",
   "pins" : [
     {
       "identity" : "eudi-lib-ios-iso18013-data-model",
@@ -15,7 +15,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git",
       "state" : {
-        "revision" : "7497cc20f53fcfe616a52926276ea67a6a3ffa52"
+        "revision" : "fe25f428471b88e975b6b07814162a2d14abbfe4"
       }
     },
     {

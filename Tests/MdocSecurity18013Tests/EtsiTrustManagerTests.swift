@@ -50,7 +50,7 @@ struct EtsiTrustManagerTests {
     @Test("digi ETSI: validation pipeline completes and the two trust APIs agree")
     func digiEtsiCompletes() async {
         let manager = EtsiTrustManager.digi
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
+        let trusted = await manager.validateCertTrustPath(chain: [leaf])
         let path = await manager.createCertTrustPath(chain: [leaf])
         // `createCertTrustPath` returns a path iff the chain is trusted — invariant holds
         // regardless of the remote list's decision (or a network error).
@@ -60,7 +60,7 @@ struct EtsiTrustManagerTests {
     @Test("digi ETSI: an untrusted certificate is not trusted")
     func digiEtsiRejectsUntrusted() async {
         let manager = EtsiTrustManager.digi
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
+        let trusted = await manager.validateCertTrustPath(chain: [leaf])
         #expect(trusted == false)
     }
 
@@ -69,7 +69,7 @@ struct EtsiTrustManagerTests {
     @Test("eudiRef ETSI: validation pipeline completes and the two trust APIs agree")
     func eudiRefEtsiCompletes() async {
         let manager = EtsiTrustManager.eudiRef
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
+        let trusted = await manager.validateCertTrustPath(chain: [leaf])
         let path = await manager.createCertTrustPath(chain: [leaf])
         #expect((path != nil) == trusted)
     }
@@ -77,7 +77,7 @@ struct EtsiTrustManagerTests {
     @Test("eudiRef ETSI: an untrusted certificate is not trusted")
     func eudiRefEtsiRejectsUntrusted() async {
         let manager = EtsiTrustManager.eudiRef
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
+        let trusted = await manager.validateCertTrustPath(chain: [leaf])
         #expect(trusted == false)
     }
 
@@ -87,7 +87,7 @@ struct EtsiTrustManagerTests {
     func staticListTrustsLeaf() async {
         let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
         let manager = EtsiTrustManager(source: config)
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
+        let trusted = await manager.validateCertTrustPath(chain: [leaf])
         #expect(trusted)
         // The completed path includes the matched anchor (the root).
         let path = await manager.createCertTrustPath(chain: [leaf])
@@ -99,7 +99,7 @@ struct EtsiTrustManagerTests {
     func staticListRejectsUnrelated() async {
         let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
         let manager = EtsiTrustManager(source: config)
-        let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [untrusted])
+        let trusted = await manager.validateCertTrustPath(chain: [untrusted])
         #expect(trusted == false)
         let path = await manager.createCertTrustPath(chain: [untrusted])
         #expect(path == nil)

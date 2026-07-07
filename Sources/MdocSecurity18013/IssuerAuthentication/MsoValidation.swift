@@ -24,6 +24,7 @@ extension IssuerSigned {
     public func validate(
         docType: String,
         rejectIfValidUntilExceedsCertificateValidity: Bool = false,
+        trustValidator: (any CertificateTrustValidator)?,
         publicCoseKeys: inout [CoseKey]
     ) throws(MsoValidationError) {
         // Perform validation logic here
