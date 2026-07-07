@@ -18,37 +18,61 @@ import Security
 import EudiEtsi1196x2
 
 public struct EtsiTrustManager: @unchecked Sendable {
-    let validator: CachedTrustValidator
+    /// Type-erased validation over the selected trust source; returns `nil` if validation throws
+    /// or the context is unsupported. Bridges the two validator kinds (cached LoTE vs. bundled
+    /// anchors), which the `EudiEtsi1196x2` API exposes through different entry points.
+    private let validateChain: ([Data], any VerificationContext) async -> IosValidationResult?
     let contextTypeMappings: EtsiContextTypeMappings?
     var currentDocType: String?
-    /// Builds a cached LoTE-based trust validator from `config`.
-    ///
-    /// - Note: Only a subset of `EtsiTrustConfig` is applied. The validator is built through
-    ///   `EudiwIosTrust.cached(urls:ttlHours:verifyJwtSignature:)`, which honors
-    ///   `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`. The remaining fields
-    ///   (`relaxCertificateProfiles`, `relaxPkixRevocation`, `loteConstraints`,
-    ///   `fileCacheExpiration`, and `classifications`) are **not** applied here: the bridged
-    ///   `EudiEtsi1196x2` API does not expose the `CoroutineDispatcher` / `Clock` instances that
-    ///   the full, config-honoring `ProvisionTrustAnchorsFromLoTEs.cached(...)` factory requires,
-    ///   so those fields can only be honored on the non-cached path.
-    public init(config: EtsiTrustConfig) {
-        let lists = config.loteLocations
-        let urls = TrustListUrls()
-        urls.pidProviders = lists.pidProviders as String?
-        urls.walletProviders = lists.walletProviders as String?
-        urls.wrpacProviders = lists.wrpacProviders as String?
-        urls.wrprcProviders = lists.wrprcProviders as String?
-        urls.pubEaaProviders = lists.pubEaaProviders as String?
-        urls.qeaProviders = lists.qeaProviders as String?
-        urls.mdlProviders = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
 
-        let verifyJwtSignature: VerifyJwtSignature = config.customJwtSignatureVerifier ?? x5cVerifyJwtSignature.shared
-        let ttlHours = config.cacheTtl / 3600
-        validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
+    /// Builds a trust manager from the selected `TrustConfig`.
+    ///
+    /// - `.etsi`: a cached LoTE validator via `EudiwIosTrust.cached(urls:ttlHours:verifyJwtSignature:)`,
+    ///   which honors `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`. The remaining
+    ///   `EtsiTrustConfig` fields (`relaxCertificateProfiles`, `relaxPkixRevocation`,
+    ///   `loteConstraints`, `fileCacheExpiration`) are **not** applied: the bridged API does not
+    ///   expose the `CoroutineDispatcher` / `Clock` instances the full,
+    ///   config-honoring `ProvisionTrustAnchorsFromLoTEs.cached(...)` factory requires.
+    /// - `.staticList`: a bundled-anchors validator via `EudiwIosTrust.usingBundledAnchors(anchors:method:)`
+    ///   — no LoTE download, no network.
+    public init(config: TrustConfig) {
         contextTypeMappings = config.contextTypeMappings
+        switch config {
+        case .etsi(let etsi):
+            let lists = etsi.loteLocations
+            let urls = TrustListUrls()
+            urls.pidProviders = lists.pidProviders as String?
+            urls.walletProviders = lists.walletProviders as String?
+            urls.wrpacProviders = lists.wrpacProviders as String?
+            urls.wrprcProviders = lists.wrprcProviders as String?
+            urls.pubEaaProviders = lists.pubEaaProviders as String?
+            urls.qeaProviders = lists.qeaProviders as String?
+            urls.mdlProviders = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
+
+            let verifyJwtSignature: VerifyJwtSignature = etsi.customJwtSignatureVerifier ?? x5cVerifyJwtSignature.shared
+            let ttlHours = etsi.cacheTtl / 3600
+            let validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
+            validateChain = { chain, context in
+                try? await validator.validate(chain: chain, context: context)
+            }
+        case .staticList(let staticList):
+            let validator = EudiwIosTrust.shared.usingBundledAnchors(anchors: staticList.bundledAnchors, method: staticList.method)
+            validateChain = { chain, context in
+                try? await EudiwIosTrust.shared.validate(validator: validator, chain: chain, context: context)
+            }
+        }
     }
-    
-    
+
+    /// Convenience initializer for an ETSI LoTE trust source.
+    public init(config: EtsiTrustConfig) {
+        self.init(config: .etsi(config))
+    }
+
+    /// Convenience initializer for a static bundled-anchors trust source.
+    public init(config: StaticListTrustConfig) {
+        self.init(config: .staticList(config))
+    }
+
     /// The verification context this configuration validates certificate chains against
     /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
     public var verificationContext: any VerificationContext {
@@ -68,8 +92,8 @@ public struct EtsiTrustManager: @unchecked Sendable {
 
 // MARK: - ReaderTrustStore
 
-extension EtsiTrustManager: ReaderTrustStore {
-    public func createCertificationTrustPath(chain: [Data]) async -> [Data]? {
+extension EtsiTrustManager: CertificateTrustValidator {
+    public func createCertTrustPath(chain: [Data]) async -> [Data]? {
         guard let result = await validate(chain: chain), result.isTrusted else { return nil }
         // Append the matched trust anchor to complete the path when it is not already present.
         var path = chain
@@ -79,14 +103,14 @@ extension EtsiTrustManager: ReaderTrustStore {
         return path
     }
 
-    public func validateCertificationTrustPath(chainToDocumentSigner: [Data]) async -> Bool {
+    public func validateCertTrustPath(chainToDocumentSigner: [Data]) async -> Bool {
         await validate(chain: chainToDocumentSigner)?.isTrusted ?? false
     }
 
-    /// Runs the async ETSI validator. Returns `nil` if validation throws or the context is
-    /// unsupported by the validator.
+    /// Runs the async validator for the configured trust source. Returns `nil` if validation
+    /// throws or the context is unsupported by the validator.
     private func validate(chain: [Data]) async -> IosValidationResult? {
-        try? await validator.validate(chain: chain, context: verificationContext)
+        await validateChain(chain, verificationContext)
     }
 }
 

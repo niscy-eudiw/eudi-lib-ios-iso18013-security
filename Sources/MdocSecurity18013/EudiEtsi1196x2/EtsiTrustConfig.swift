@@ -25,7 +25,7 @@ import EudiEtsi1196x2
 public struct EtsiTrustConfig: @unchecked Sendable {
     /// The LoTE download locations (e.g., PID, PubEAA, WRPAC provider URLs).
     public let loteLocations: SupportedLists<NSString>
-    // verification context mappings
+    // verification context mappings (doc type to etsi context)
     public let contextTypeMappings: EtsiContextTypeMappings?
     /// How long downloaded LoTE files are cached on disk (default: 24 hours).
     // public let fileCacheExpiration: TimeInterval
