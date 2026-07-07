@@ -85,8 +85,8 @@ struct EtsiTrustManagerTests {
 
     @Test("static list: a leaf issued by the bundled root is trusted (PKIX)")
     func staticListTrustsLeaf() async {
-        let config = StaticListTrustConfig(rootCertificates: [root], context: .wrpac, method: .pkix)
-        let manager = EtsiTrustManager(config: config)
+        let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
+        let manager = EtsiTrustManager(source: config)
         let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [leaf])
         #expect(trusted)
         // The completed path includes the matched anchor (the root).
@@ -97,8 +97,8 @@ struct EtsiTrustManagerTests {
 
     @Test("static list: an unrelated certificate is not trusted")
     func staticListRejectsUnrelated() async {
-        let config = StaticListTrustConfig(rootCertificates: [root], context: .wrpac, method: .pkix)
-        let manager = EtsiTrustManager(config: config)
+        let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
+        let manager = EtsiTrustManager(source: config)
         let trusted = await manager.validateCertTrustPath(chainToDocumentSigner: [untrusted])
         #expect(trusted == false)
         let path = await manager.createCertTrustPath(chain: [untrusted])

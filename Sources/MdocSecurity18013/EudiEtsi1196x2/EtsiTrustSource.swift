@@ -22,7 +22,7 @@ import EudiEtsi1196x2
 /// This centralizes the LoTE pipeline parameters so that the core can build the ETSI
 /// trust source internally, eliminating the need for consumers to construct the ETSI
 /// library plumbing themselves.
-public struct EtsiTrustConfig: @unchecked Sendable {
+public struct EtsiTrustSource: @unchecked Sendable {
     /// The LoTE download locations (e.g., PID, PubEAA, WRPAC provider URLs).
     public let loteLocations: SupportedLists<NSString>
     // verification context mappings (doc type to etsi context)
@@ -53,7 +53,7 @@ public struct EtsiTrustConfig: @unchecked Sendable {
         loteLocations: SupportedLists<NSString>,
         contextTypeMappings: EtsiContextTypeMappings? = nil,
         //fileCacheExpiration: TimeInterval = EtsiTrustConfig.defaultFileCacheExpiration,
-        cacheTtl: TimeInterval = EtsiTrustConfig.defaultCacheTtl,
+        cacheTtl: TimeInterval = EtsiTrustSource.defaultCacheTtl,
         //relaxCertificateProfiles: Bool = false,
         //relaxPkixRevocation: Bool = false,
         customJwtSignatureVerifier: (any VerifyJwtSignature)? = nil,
@@ -73,7 +73,7 @@ public struct EtsiTrustConfig: @unchecked Sendable {
 
 // MARK: - Ready-made environment presets
 
-extension EtsiTrustConfig {
+extension EtsiTrustSource {
     /// LoTE trust lists for the EC DIGIT acceptance environment (PID, Wallet, WRPAC, mDL).
     ///
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.

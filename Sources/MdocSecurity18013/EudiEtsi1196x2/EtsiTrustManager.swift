@@ -32,12 +32,12 @@ public struct EtsiTrustManager: @unchecked Sendable {
     ///   `EtsiTrustConfig` fields (`relaxCertificateProfiles`, `relaxPkixRevocation`,
     ///   `loteConstraints`, `fileCacheExpiration`) are **not** applied: the bridged API does not
     ///   expose the `CoroutineDispatcher` / `Clock` instances the full,
-    ///   config-honoring `ProvisionTrustAnchorsFromLoTEs.cached(...)` factory requires.
+    ///   source-honoring `ProvisionTrustAnchorsFromLoTEs.cached(...)` factory requires.
     /// - `.staticList`: a bundled-anchors validator via `EudiwIosTrust.usingBundledAnchors(anchors:method:)`
     ///   — no LoTE download, no network.
-    public init(config: TrustConfig) {
-        contextTypeMappings = config.contextTypeMappings
-        switch config {
+    public init(source: TrustSource) {
+        contextTypeMappings = source.contextTypeMappings
+        switch source {
         case .etsi(let etsi):
             let lists = etsi.loteLocations
             let urls = TrustListUrls()
@@ -64,13 +64,13 @@ public struct EtsiTrustManager: @unchecked Sendable {
     }
 
     /// Convenience initializer for an ETSI LoTE trust source.
-    public init(config: EtsiTrustConfig) {
-        self.init(config: .etsi(config))
+    public init(source: EtsiTrustSource) {
+        self.init(source: .etsi(source))
     }
 
     /// Convenience initializer for a static bundled-anchors trust source.
-    public init(config: StaticListTrustConfig) {
-        self.init(config: .staticList(config))
+    public init(source: StaticListTrustSource) {
+        self.init(source: .staticList(source))
     }
 
     /// The verification context this configuration validates certificate chains against
@@ -84,10 +84,10 @@ public struct EtsiTrustManager: @unchecked Sendable {
   
 
     /// Trust manager for the EC DIGIT acceptance environment.
-    public static let digi: Self = Self(config: .digi)
+    public static let digi: Self = Self(source: .digi)
 
     /// Trust manager for the EUDI Wallet Reference Implementation environment.
-    public static let eudiRef: Self = Self(config: .eudiRef)
+    public static let eudiRef: Self = Self(source: .eudiRef)
 }
 
 // MARK: - ReaderTrustStore

@@ -22,7 +22,7 @@ import EudiEtsi1196x2
 ///
 /// This is the iOS counterpart of the "classic" pre-LoTE flow — bundling root certificates and
 /// validating credential chains against them via `EudiwIosTrust.usingBundledAnchors`.
-public struct StaticListTrustConfig: @unchecked Sendable {
+public struct StaticListTrustSource: @unchecked Sendable {
     /// DER-encoded trust anchors, keyed by the verification context they anchor.
     public let anchorsPerContext: [EtsiContextType: [Data]]
     /// The chain-validation strategy: `.pkix` for chain-to-anchor path validation (anchors are CA

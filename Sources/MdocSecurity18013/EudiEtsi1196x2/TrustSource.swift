@@ -17,17 +17,17 @@ limitations under the License.
 import Foundation
 
 /// The trust source an `EtsiTrustManager` is built from.
-public enum TrustConfig: @unchecked Sendable {
+public enum TrustSource: @unchecked Sendable {
     /// ETSI LoTE (List of Trusted Entities) infrastructure — trust anchors downloaded from LoTEs.
-    case etsi(EtsiTrustConfig)
+    case etsi(EtsiTrustSource)
     /// A static, bundled list of root/anchor certificates — no LoTE download, no network.
-    case staticList(StaticListTrustConfig)
+    case staticList(StaticListTrustSource)
 
     /// Doc-type → context mappings shared by both config kinds.
     var contextTypeMappings: EtsiContextTypeMappings? {
         switch self {
-        case .etsi(let config): return config.contextTypeMappings
-        case .staticList(let config): return config.contextTypeMappings
+        case .etsi(let source): return source.contextTypeMappings
+        case .staticList(let source): return source.contextTypeMappings
         }
     }
 }
