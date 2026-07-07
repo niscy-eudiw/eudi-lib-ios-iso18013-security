@@ -117,8 +117,11 @@ extension EtsiTrustManager: CertificateTrustValidator {
         return path
     }
 
-    public func validateCertTrustPath(chain: [Data]) async -> Bool {
-        await validate(chain: chain)?.isTrusted ?? false
+    public func validateCertTrustPath(chain: [Data]) async -> (Bool, String?) {
+        guard let result = await validate(chain: chain) else {
+            return (false, "Certificate chain validation failed")
+        }
+        return (result.isTrusted, result.failureReason)
     }
 
     /// Runs the async validator for the configured trust source. Returns `nil` if validation

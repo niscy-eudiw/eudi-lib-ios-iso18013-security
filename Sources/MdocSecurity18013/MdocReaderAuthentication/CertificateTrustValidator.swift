@@ -48,9 +48,10 @@ public protocol CertificateTrustValidator {
     ///
     /// - Parameter chain: the DER-encoded document signer, intermediate
     ///   certificates and optional root certificate.
-    /// - Returns: `false` if no trusted certificate could be found for the certificate chain
-    ///   or if the certificate chain is invalid for any reason.
-    func validateCertTrustPath(chain: [Data]) async -> Bool
+    /// - Returns: a tuple whose first element is `false` if no trusted certificate could be found
+    ///   for the certificate chain or if the certificate chain is invalid for any reason, and whose
+    ///   second element is a human-readable failure reason when validation did not succeed (or `nil`).
+    func validateCertTrustPath(chain: [Data]) async -> (Bool, String?)
 }
 
 // MARK: - SecCertificate convenience
@@ -75,8 +76,10 @@ public extension CertificateTrustValidator {
     ///
     /// - Parameter chainToDocumentSigner: the document signer, intermediate certificates and
     ///   optional root certificate.
-    /// - Returns: `false` if no trusted certificate could be found or the chain is invalid.
-    func validateCertTrustPath(chainToDocumentSigner: x5chain) async -> Bool {
+    /// - Returns: a tuple whose first element is `false` if no trusted certificate could be found
+    ///   or the chain is invalid, and whose second element is a human-readable failure reason when
+    ///   validation did not succeed (or `nil`).
+    func validateCertTrustPath(chainToDocumentSigner: x5chain) async -> (Bool, String?) {
         let derChain = chainToDocumentSigner.map { SecCertificateCopyData($0) as Data }
         return await validateCertTrustPath(chain: derChain)
     }
