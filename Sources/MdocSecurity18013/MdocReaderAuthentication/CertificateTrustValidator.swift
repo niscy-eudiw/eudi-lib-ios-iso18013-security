@@ -24,7 +24,7 @@ import Security
 /// trust manager is selected by OID in the DS certificate. These trust managers
 /// should have a specific trust store for each certificate and may implement
 /// specific checks required for the document type.
-public protocol ReaderTrustStore {
+public protocol CertificateTrustValidator {
     /// Creates a certification trust path by finding a certificate in the trust store
     /// that is the issuer of a certificate in the certificate chain.
     /// Returns `nil` if no trusted certificate can be found.
@@ -33,7 +33,7 @@ public protocol ReaderTrustStore {
     ///   certificate that signed the previous certificate.
     /// - Returns: the certification path as DER-encoded certificates in the same order, or `nil`
     ///   if no certification trust path could be created.
-    func createCertificationTrustPath(chain: [Data]) async -> [Data]?
+    func createCertTrustPath(chain: [Data]) async -> [Data]?
 
     /// Validates that the given certificate chain is a valid chain that includes a document
     /// signer. Accepts a chain of certificates, starting with the document signer certificate,
@@ -47,21 +47,21 @@ public protocol ReaderTrustStore {
     ///   certificates and optional root certificate.
     /// - Returns: `false` if no trusted certificate could be found for the certificate chain
     ///   or if the certificate chain is invalid for any reason.
-    func validateCertificationTrustPath(chainToDocumentSigner: [Data]) async -> Bool
+    func validateCertTrustPath(chainToDocumentSigner: [Data]) async -> Bool
 }
 
 // MARK: - SecCertificate convenience
 
-public extension ReaderTrustStore {
+public extension CertificateTrustValidator {
     /// Convenience overload of `createCertificationTrustPath(chain:)` that accepts a chain of
     /// `SecCertificate`s (leaf first).
     ///
     /// - Parameter chain: certificates, leaf certificate first.
     /// - Returns: the certification path in the same order, or `nil` if no trust path could be
     ///   created (including when any returned DER cannot be decoded into a certificate).
-    func createCertificationTrustPath(chain: x5chain) async -> x5chain? {
+    func createCertTrustPath(chain: x5chain) async -> x5chain? {
         let derChain = chain.map { SecCertificateCopyData($0) as Data }
-        guard let derPath = await createCertificationTrustPath(chain: derChain) else { return nil }
+        guard let derPath = await createCertTrustPath(chain: derChain) else { return nil }
         let path = derPath.compactMap { SecCertificateCreateWithData(nil, $0 as CFData) }
         guard path.count == derPath.count else { return nil }
         return path
@@ -73,8 +73,8 @@ public extension ReaderTrustStore {
     /// - Parameter chainToDocumentSigner: the document signer, intermediate certificates and
     ///   optional root certificate.
     /// - Returns: `false` if no trusted certificate could be found or the chain is invalid.
-    func validateCertificationTrustPath(chainToDocumentSigner: x5chain) async -> Bool {
+    func validateCertTrustPath(chainToDocumentSigner: x5chain) async -> Bool {
         let derChain = chainToDocumentSigner.map { SecCertificateCopyData($0) as Data }
-        return await validateCertificationTrustPath(chainToDocumentSigner: derChain)
+        return await validateCertTrustPath(chainToDocumentSigner: derChain)
     }
 }
