@@ -15,15 +15,16 @@ limitations under the License.
 */
 import Foundation
 import CryptoKit
+import Security
 import EudiEtsi1196x2
 
 /// A ``VerifyJwtSignature`` implementation that verifies a LoTE JWS using the X.509
 /// certificate chain embedded in its `x5c` protected header (RFC 7515 §4.1.6).
 ///
 /// The JWS signature is validated against the public key of the leaf certificate
-/// (`x5c[0]`) using the algorithm declared in the `alg` header. ECDSA algorithms
-/// (`ES256` / `ES384` / `ES512`) are supported, matching the signature scheme used by
-/// the EUDI trust lists.
+/// (`x5c[0]`) using the algorithm declared in the `alg` header. Both ECDSA
+/// (`ES256` / `ES384` / `ES512`) and RSASSA-PKCS1-v1_5 (`RS256` / `RS384` / `RS512`)
+/// algorithms are supported, matching the signature schemes used by the EUDI trust lists.
 ///
 /// This performs the cryptographic signature check only; anchoring the `x5c` chain to a
 /// trusted scheme operator is handled by the certificate-profile validation of the
@@ -72,29 +73,56 @@ final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
               let certData = Data(base64Encoded: leafBase64) else {
             throw JwtSignatureError.missingX5c
         }
-        guard let publicKeyX963 = SecurityHelpers.getPublicKeyx963(publicCertData: certData) else {
-            throw JwtSignatureError.invalidCertificate
-        }
         // JWS signing input is the ASCII bytes of "<header>.<payload>".
         let signingInput = Data("\(headerPart).\(payloadPart)".utf8)
         let isValid: Bool
         switch alg {
         case "ES256":
-            let key = try P256.Signing.PublicKey(x963Representation: publicKeyX963)
+            let key = try P256.Signing.PublicKey(x963Representation: try ecPublicKeyX963(certData: certData))
             let sig = try P256.Signing.ECDSASignature(rawRepresentation: signature)
             isValid = key.isValidSignature(sig, for: signingInput)
         case "ES384":
-            let key = try P384.Signing.PublicKey(x963Representation: publicKeyX963)
+            let key = try P384.Signing.PublicKey(x963Representation: try ecPublicKeyX963(certData: certData))
             let sig = try P384.Signing.ECDSASignature(rawRepresentation: signature)
             isValid = key.isValidSignature(sig, for: signingInput)
         case "ES512":
-            let key = try P521.Signing.PublicKey(x963Representation: publicKeyX963)
+            let key = try P521.Signing.PublicKey(x963Representation: try ecPublicKeyX963(certData: certData))
             let sig = try P521.Signing.ECDSASignature(rawRepresentation: signature)
             isValid = key.isValidSignature(sig, for: signingInput)
+        case "RS256":
+            isValid = try verifyRSA(certData: certData, signingInput: signingInput, signature: signature, algorithm: .rsaSignatureMessagePKCS1v15SHA256)
+        case "RS384":
+            isValid = try verifyRSA(certData: certData, signingInput: signingInput, signature: signature, algorithm: .rsaSignatureMessagePKCS1v15SHA384)
+        case "RS512":
+            isValid = try verifyRSA(certData: certData, signingInput: signingInput, signature: signature, algorithm: .rsaSignatureMessagePKCS1v15SHA512)
         default:
             throw JwtSignatureError.unsupportedAlgorithm(alg)
         }
         guard isValid else { throw JwtSignatureError.invalidSignature }
+    }
+
+    /// Extracts the EC public key of the leaf certificate as an x9.63 representation.
+    private static func ecPublicKeyX963(certData: Data) throws -> Data {
+        guard let publicKeyX963 = SecurityHelpers.getPublicKeyx963(publicCertData: certData) else {
+            throw JwtSignatureError.invalidCertificate
+        }
+        return publicKeyX963
+    }
+
+    /// Verifies an RSASSA-PKCS1-v1_5 (`RS256` / `RS384` / `RS512`) JWS signature against the RSA
+    /// public key of the leaf certificate, using the Security framework (CryptoKit has no RSA).
+    private static func verifyRSA(certData: Data, signingInput: Data, signature: Data, algorithm: SecKeyAlgorithm) throws -> Bool {
+        guard let certificate = SecCertificateCreateWithData(nil, certData as CFData),
+              let publicKey = SecCertificateCopyKey(certificate) else {
+            throw JwtSignatureError.invalidCertificate
+        }
+        var error: Unmanaged<CFError>?
+        let isValid = SecKeyVerifySignature(publicKey, algorithm, signingInput as CFData, signature as CFData, &error)
+        if let error {
+            logger.error("RSA JWT signature verification error: \(error.takeRetainedValue())")
+            return false
+        }
+        return isValid
     }
 
     /// Decode a base64url-encoded (RFC 4648 §5, no padding) string into `Data`.
