@@ -22,7 +22,6 @@ public enum TrustSource: @unchecked Sendable {
     case etsi(EtsiTrustSource)
     /// A static, bundled list of root/anchor certificates — no LoTE download, no network.
     case staticList(StaticListTrustSource)
-
     /// Doc-type → context mappings shared by both config kinds.
     var contextTypeMappings: EtsiContextTypeMappings? {
         switch self {

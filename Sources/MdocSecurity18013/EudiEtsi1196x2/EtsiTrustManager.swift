@@ -53,12 +53,26 @@ public struct EtsiTrustManager: @unchecked Sendable {
             let ttlHours = etsi.cacheTtl / 3600
             let validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
             validateChain = { chain, context in
-                try? await validator.validate(chain: chain, context: context)
+                do {
+                    let iosVal = try await validator.validate(chain: chain, context: context)
+                    if let failReason = iosVal.failureReason { logger.warning("ETSI LoTE not trusted reason: \(failReason)")}
+                    return iosVal
+              } catch {
+                    logger.error("ETSI LoTE chain validation failed: \(error)")
+                    return nil
+                }
             }
         case .staticList(let staticList):
             let validator = EudiwIosTrust.shared.usingBundledAnchors(anchors: staticList.bundledAnchors, method: staticList.method)
             validateChain = { chain, context in
-                try? await EudiwIosTrust.shared.validate(validator: validator, chain: chain, context: context)
+                do {
+                    let iosVal = try await EudiwIosTrust.shared.validate(validator: validator, chain: chain, context: context)
+                    if let failReason = iosVal.failureReason { logger.warning("Bundled-anchors not trusted reason: \(failReason)")}
+                    return iosVal
+                } catch {
+                    logger.error("Bundled-anchors chain validation failed: \(error)")
+                    return nil
+                }
             }
         }
     }

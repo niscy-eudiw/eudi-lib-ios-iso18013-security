@@ -44,13 +44,31 @@ final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
         }
     }
 
-    enum JwtSignatureError: Error {
+    enum JwtSignatureError: LocalizedError {
         case malformedJwt
         case invalidHeader
         case missingX5c
         case invalidCertificate
         case unsupportedAlgorithm(String)
         case invalidSignature
+
+        var errorDescription: String? {
+            switch self {
+            case .malformedJwt:
+                return NSLocalizedString("The JWT is malformed.", comment: "JwtSignatureError")
+            case .invalidHeader:
+                return NSLocalizedString("The JWT header is invalid.", comment: "JwtSignatureError")
+            case .missingX5c:
+                return NSLocalizedString("The JWT header is missing a valid x5c certificate chain.", comment: "JwtSignatureError")
+            case .invalidCertificate:
+                return NSLocalizedString("The leaf certificate in the x5c chain is invalid.", comment: "JwtSignatureError")
+            case .unsupportedAlgorithm(let algorithm):
+                let message = "The signature algorithm '\(algorithm)' is not supported."
+                return NSLocalizedString(message, comment: "JwtSignatureError")
+            case .invalidSignature:
+                return NSLocalizedString("The JWT signature is invalid.", comment: "JwtSignatureError")
+            }
+        }
     }
 
     /// Verify the JWS signature against the leaf certificate carried in the `x5c` header.
