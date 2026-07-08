@@ -27,14 +27,6 @@ public struct EtsiTrustSource: @unchecked Sendable {
     public let loteLocations: SupportedLists<NSString>
     // verification context mappings (doc type to etsi context)
     public let contextTypeMappings: EtsiContextTypeMappings?
-    /// How long downloaded LoTE files are cached on disk (default: 24 hours).
-    // public let fileCacheExpiration: TimeInterval
-    /// How long the in-memory trust anchor cache is valid (default: 20 minutes).
-    public let cacheTtl: TimeInterval
-    /// Whether to strip end-entity profile constraints (for DEV/testing).
-    // public let relaxCertificateProfiles: Bool
-    /// Whether to disable PKIX revocation checking (for DEV/testing).
-    // public let relaxPkixRevocation: Bool
     /// Optional custom JWT signature verifier for LoTE JWTs; when `nil`, the core uses
     /// its built-in verifier.
     public let customJwtSignatureVerifier: (any VerifyJwtSignature)?
@@ -42,33 +34,27 @@ public struct EtsiTrustSource: @unchecked Sendable {
     public let loteConstraints: any LoadLoTEAndPointersConstraints
 
     /// How long downloaded LoTE files are cached on disk by default (24 hours).
-    public static let defaultFileCacheExpiration: TimeInterval = 24 * 60 * 60
-    /// How long the in-memory trust anchor cache is valid by default (20 minutes).
-    public static let defaultCacheTtl: TimeInterval = 20 * 60
+    public static let defaultCacheTtlHours: TimeInterval = 24
 
-    /// `cacheTtl` expressed in hours, for the `EudiwIosTrust.cached(ttlHours:)` boundary.
-    public var cacheTtlHours: Double { cacheTtl / 3600 }
+    /// `cacheTtlHours` expressed in hours, for the `EudiwIosTrust.cached(ttlHours:)` boundary.
+    public let cacheTtlHours: Double
 
     public init(
         loteLocations: SupportedLists<NSString>,
         contextTypeMappings: EtsiContextTypeMappings? = nil,
-        //fileCacheExpiration: TimeInterval = EtsiTrustConfig.defaultFileCacheExpiration,
-        cacheTtl: TimeInterval = EtsiTrustSource.defaultCacheTtl,
-        //relaxCertificateProfiles: Bool = false,
-        //relaxPkixRevocation: Bool = false,
+        cacheTtlHours: TimeInterval = EtsiTrustSource.defaultCacheTtlHours,
         customJwtSignatureVerifier: (any VerifyJwtSignature)? = nil,
         loteConstraints: any LoadLoTEAndPointersConstraints = LoadLoTEAndPointersConstraintsDoNotLoadOtherPointers.shared
     ) {
         self.loteLocations = loteLocations
         self.contextTypeMappings = contextTypeMappings
         //self.fileCacheExpiration = fileCacheExpiration
-        self.cacheTtl = cacheTtl
+        self.cacheTtlHours = cacheTtlHours
         //self.relaxCertificateProfiles = relaxCertificateProfiles
         //self.relaxPkixRevocation = relaxPkixRevocation
         self.customJwtSignatureVerifier = customJwtSignatureVerifier
         self.loteConstraints = loteConstraints
     }
-
 }
 
 // MARK: - Ready-made environment presets

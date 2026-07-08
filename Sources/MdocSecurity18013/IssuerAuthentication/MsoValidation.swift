@@ -23,8 +23,9 @@ import X509
 extension IssuerSigned {
     public func validate(
         docType: String,
+        trustValidator: (any CertificateTrustValidator),
+        trustPolicy: TrustPolicy,
         rejectIfValidUntilExceedsCertificateValidity: Bool = false,
-        trustValidator: (any CertificateTrustValidator)? = nil,
         publicCoseKeys: inout [CoseKey]
     ) async throws(MsoValidationError) {
         // Perform validation logic here
@@ -40,7 +41,7 @@ extension IssuerSigned {
             errors.append(contentsOf: validityErrors)
         }
         if let trustErrors = await validateIssuerTrust(trustValidator: trustValidator) {
-            errors.append(contentsOf: trustErrors)
+            if trustPolicy == .enforce { errors.append(contentsOf: trustErrors) }
         }
         let bindingKeyErrors = validateMsoSignature(publicCoseKeys: &publicCoseKeys)
         if let bindingKeyErrors { errors.append(contentsOf: bindingKeyErrors)}
@@ -76,9 +77,8 @@ extension IssuerSigned {
     /// `.issuerTrustFailed` error carrying the validator's failure reason when the chain is
     /// not trusted. Returns `nil` when no trust validator is provided or the chain is trusted.
     func validateIssuerTrust(
-        trustValidator: (any CertificateTrustValidator)?
+        trustValidator: (any CertificateTrustValidator)
     ) async -> [MsoValidationError]? {
-        guard let trustValidator else { return nil }
         guard !issuerAuth.x5chain.isEmpty else {
             return [.issuerTrustFailed("No issuer certificates provided in x5chain")]
         }

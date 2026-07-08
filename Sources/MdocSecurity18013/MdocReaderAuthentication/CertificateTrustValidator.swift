@@ -18,12 +18,7 @@ import Foundation
 import Security
 
 /// Interface that defines a trust manager, used to check the validity of a
-/// document signer and the associated certificate chain.
-///
-/// Note that each document type should have a different trust manager; this
-/// trust manager is selected by OID in the DS certificate. These trust managers
-/// should have a specific trust store for each certificate and may implement
-/// specific checks required for the document type.
+/// document signer and the associated certificate chain. 
 public protocol CertificateTrustValidator {
     /// The document type this validator is currently operating on. Used to resolve the trust context appropriate for the document being validated.
     var docType: String? { get set }
@@ -71,16 +66,16 @@ public extension CertificateTrustValidator {
         return path
     }
 
-    /// Convenience overload of `validateCertificationTrustPath(chainToDocumentSigner:)` that
+    /// Convenience overload of `validateCertificationTrustPath(x5chain:)` that
     /// accepts a chain of `SecCertificate`s (document signer first).
     ///
-    /// - Parameter chainToDocumentSigner: the document signer, intermediate certificates and
+    /// - Parameter x5chain: the document signer, intermediate certificates and
     ///   optional root certificate.
     /// - Returns: a tuple whose first element is `false` if no trusted certificate could be found
     ///   or the chain is invalid, and whose second element is a human-readable failure reason when
     ///   validation did not succeed (or `nil`).
-    func validateCertTrustPath(chainToDocumentSigner: x5chain) async -> (Bool, String?) {
-        let derChain = chainToDocumentSigner.map { SecCertificateCopyData($0) as Data }
+    func validateCertTrustPath(chain: x5chain) async -> (Bool, String?) {
+        let derChain = chain.map { SecCertificateCopyData($0) as Data }
         return await validateCertTrustPath(chain: derChain)
     }
 }

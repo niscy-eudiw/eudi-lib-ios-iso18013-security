@@ -18,9 +18,9 @@ import Security
 import EudiEtsi1196x2
 
 public struct EtsiTrustManager: @unchecked Sendable {
-    /// Type-erased validation over the selected trust source; returns `nil` if validation throws
-    /// or the context is unsupported. Bridges the two validator kinds (cached LoTE vs. bundled
-    /// anchors), which the `EudiEtsi1196x2` API exposes through different entry points.
+    // Type-erased validation over the selected trust source; returns `nil` if validation throws
+    // or the context is unsupported. Bridges the two validator kinds (cached LoTE vs. bundled
+    // anchors), which the `EudiEtsi1196x2` API exposes through different entry points.
     private let validateChain: ([Data], any VerificationContext) async -> IosValidationResult?
     let contextTypeMappings: EtsiContextTypeMappings?
     public var docType: String?
@@ -28,11 +28,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
     /// Builds a trust manager from the selected `TrustConfig`.
     ///
     /// - `.etsi`: a cached LoTE validator via `EudiwIosTrust.cached(urls:ttlHours:verifyJwtSignature:)`,
-    ///   which honors `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`. The remaining
-    ///   `EtsiTrustConfig` fields (`relaxCertificateProfiles`, `relaxPkixRevocation`,
-    ///   `loteConstraints`, `fileCacheExpiration`) are **not** applied: the bridged API does not
-    ///   expose the `CoroutineDispatcher` / `Clock` instances the full,
-    ///   source-honoring `ProvisionTrustAnchorsFromLoTEs.cached(...)` factory requires.
+    ///   which honors `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`.
     /// - `.staticList`: a bundled-anchors validator via `EudiwIosTrust.usingBundledAnchors(anchors:method:)`
     ///   — no LoTE download, no network.
     public init(source: TrustSource) {
@@ -50,8 +46,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
             urls.mdlProviders = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
 
             let verifyJwtSignature: VerifyJwtSignature = etsi.customJwtSignatureVerifier ?? x5cVerifyJwtSignature.shared
-            let ttlHours = etsi.cacheTtl / 3600
-            let validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: ttlHours, verifyJwtSignature: verifyJwtSignature)
+            let validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: etsi.cacheTtlHours, verifyJwtSignature: verifyJwtSignature)
             validateChain = { chain, context in
                 do {
                     let iosVal = try await validator.validate(chain: chain, context: context)
@@ -95,7 +90,6 @@ public struct EtsiTrustManager: @unchecked Sendable {
         }
         return EtsiContextType.wrpac.verificationContext
     }
-  
 
     /// Trust manager for the EC DIGIT acceptance environment.
     public static let digi: Self = Self(source: .digi)

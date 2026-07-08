@@ -29,4 +29,24 @@ public enum TrustSource: @unchecked Sendable {
         case .staticList(let source): return source.contextTypeMappings
         }
     }
+
+    /// Returns a copy of this trust source with its doc-type → context mappings replaced.
+    func withContextTypeMappings(_ mappings: EtsiContextTypeMappings?) -> TrustSource {
+        switch self {
+        case .etsi(let source):
+            return .etsi(EtsiTrustSource(
+                loteLocations: source.loteLocations,
+                contextTypeMappings: mappings,
+                cacheTtlHours: source.cacheTtlHours,
+                customJwtSignatureVerifier: source.customJwtSignatureVerifier,
+                loteConstraints: source.loteConstraints
+            ))
+        case .staticList(let source):
+            return .staticList(StaticListTrustSource(
+                anchorsPerContext: source.anchorsPerContext,
+                method: source.method,
+                contextTypeMappings: mappings
+            ))
+        }
+    }
 }
