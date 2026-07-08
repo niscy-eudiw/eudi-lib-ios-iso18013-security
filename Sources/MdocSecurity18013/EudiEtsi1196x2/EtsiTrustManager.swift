@@ -92,7 +92,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
     }
 
     /// Trust manager for the EC DIGIT acceptance environment.
-    public static let digi: Self = Self(source: .digi)
+    public static let digi: Self = Self(source: .digiTrust)
 
     /// Trust manager for the EUDI Wallet Reference Implementation environment.
     public static let eudiRef: Self = Self(source: .eudiRef)

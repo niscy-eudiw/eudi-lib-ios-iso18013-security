@@ -63,7 +63,7 @@ extension EtsiTrustSource {
     /// LoTE trust lists for the EC DIGIT acceptance environment (PID, Wallet, WRPAC, mDL).
     ///
     /// certificate a reader presents. Build `EtsiTrustConfig` directly to target another context.
-    public static var digi: Self { Self(loteLocations: SupportedLists<NSString>(
+    public static var digiTrust: Self { Self(loteLocations: SupportedLists<NSString>(
                 pidProviders: DIGITTrustLists.pidProviders as NSString,
                 walletProviders: DIGITTrustLists.walletProviders as NSString,
                 wrpacProviders: DIGITTrustLists.wrpacProviders as NSString,
