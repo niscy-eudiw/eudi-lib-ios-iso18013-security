@@ -19,7 +19,7 @@ import Security
 
 /// Interface that defines a trust manager, used to check the validity of a
 /// document signer and the associated certificate chain. 
-public protocol CertificateTrustValidator {
+public protocol CertificateTrustValidator: Sendable {
     /// The document type this validator is currently operating on. Used to resolve the trust context appropriate for the document being validated.
     var docType: String? { get set }
 
