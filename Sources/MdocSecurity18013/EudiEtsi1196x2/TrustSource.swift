@@ -23,7 +23,7 @@ public enum TrustSource: @unchecked Sendable {
     /// A static, bundled list of root/anchor certificates — no LoTE download, no network.
     case staticList(StaticListTrustSource)
     /// Doc-type → context mappings shared by both config kinds.
-    var contextTypeMappings: EtsiContextTypeMappings? {
+    public var contextTypeMappings: EtsiContextTypeMappings? {
         switch self {
         case .etsi(let source): return source.contextTypeMappings
         case .staticList(let source): return source.contextTypeMappings
@@ -31,7 +31,7 @@ public enum TrustSource: @unchecked Sendable {
     }
 
     /// Returns a copy of this trust source with its doc-type → context mappings replaced.
-    func withContextTypeMappings(_ mappings: EtsiContextTypeMappings?) -> TrustSource {
+    public func withContextTypeMappings(_ mappings: EtsiContextTypeMappings?) -> TrustSource {
         switch self {
         case .etsi(let source):
             return .etsi(EtsiTrustSource(

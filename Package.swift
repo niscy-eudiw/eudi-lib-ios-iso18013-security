@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
         .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", revision: "fe25f428471b88e975b6b07814162a2d14abbfe4"),
+        .package(url: "https://github.com/beatt83/jose-swift.git", from: "6.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -28,6 +29,7 @@ let package = Package(
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
                 .product(name: "X509", package: "swift-certificates"),
                 .product(name: "EudiEtsi1196x2", package: "eudi-lib-kmp-etsi-1196x2"),
+                .product(name: "jose-swift", package: "jose-swift"),
             ],
             //swiftSettings: [.enableUpcomingFeature("InferIsolatedConformances"), .enableUpcomingFeature("NonisolatedNonsendingByDefault")],
         ),
