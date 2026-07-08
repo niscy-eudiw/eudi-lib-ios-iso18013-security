@@ -29,19 +29,14 @@ import JSONWebSignature
 /// This performs the cryptographic signature check only; anchoring the `x5c` chain to a
 /// trusted scheme operator is handled by the certificate-profile validation of the
 /// surrounding trust pipeline.
-final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
-    static let shared = x5cVerifyJwtSignature()
+public final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
+    public static let shared = x5cVerifyJwtSignature()
 
     public init() {}
 
-    func invoke(jwt: String) async throws -> any VerifyJwtSignatureOutcome {
-        do {
-            try Self.verify(jwt: jwt)
-            return VerifyJwtSignatureOutcomeVerified(jwt: jwt)
-        } catch {
-            logger.error("x5c JWT signature verification failed: \(error)")
-            return VerifyJwtSignatureOutcomeNotVerified(cause: nil)
-        }
+    public func invoke(jwt: String) async throws -> any VerifyJwtSignatureOutcome {
+    	try Self.verify(jwt: jwt)
+		return VerifyJwtSignatureOutcomeVerified(jwt: jwt)
     }
 
     /// Verify the JWS signature against the leaf certificate carried in the `x5c` header,
@@ -52,7 +47,7 @@ final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
     /// schemes used by the EUDI trust lists.
     /// - Throws: `JWS.JWSError` when the token is malformed, the verifying key is missing, or the
     ///   signature is invalid. Parse and verification failures are propagated from `jose-swift`.
-    static func verify(jwt: String) throws {
+    public static func verify(jwt: String) throws {
         // `JWS(jwsString:)` throws `JWS.JWSError.invalidString` for a malformed token.
         let jws = try JWS(jwsString: jwt)
         // x5c entries are base64 (standard, not base64url) DER certificates; the leaf is first.
