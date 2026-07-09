@@ -49,7 +49,6 @@ public struct StaticListTrustSource: @unchecked Sendable {
     ///     Wallet Relying Party access certificate a reader presents).
     public init(
         rootCertificates: [Data],
-        context: EtsiContextType = .wrpac,
         method: BundledAnchorMethod = .pkix,
         contextTypeMappings: EtsiContextTypeMappings? = nil
     ) {
@@ -65,11 +64,11 @@ public struct StaticListTrustSource: @unchecked Sendable {
         let anchors = BundledAnchors()
         for (context, certificates) in anchorsPerContext {
             switch context {
-            case .pid:    anchors.pid = certificates
-            case .mdl:    anchors.mdl = certificates
+            case .pid: anchors.pid = certificates
+            case .mdl: anchors.mdl = certificates
             case .wallet: anchors.wallet = certificates
-            case .wrpac:  anchors.wrpac = certificates
-            case .wrprc:  anchors.wrprc = certificates
+            case .wrpac: anchors.wrpac = certificates
+            case .wrprc: anchors.wrprc = certificates
             }
         }
         return anchors

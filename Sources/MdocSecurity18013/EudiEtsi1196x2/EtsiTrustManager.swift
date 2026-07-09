@@ -17,13 +17,17 @@ import Foundation
 import Security
 import EudiEtsi1196x2
 
-public struct EtsiTrustManager: @unchecked Sendable {
+public final class EtsiTrustManager: @unchecked Sendable {
     // Type-erased validation over the selected trust source; returns `nil` if validation throws
     // or the context is unsupported. Bridges the two validator kinds (cached LoTE vs. bundled
     // anchors), which the `EudiEtsi1196x2` API exposes through different entry points.
+    private let cachedValidator: CachedTrustValidator?
     private let validateChain: ([Data], any VerificationContext) async -> IosValidationResult?
     let contextTypeMappings: EtsiContextTypeMappings?
     public var docType: String?
+
+    // Fallback manager consulted when this manager cannot evaluate the chain.
+    private let fallback: EtsiTrustManager?
 
     /// Builds a trust manager from the selected `TrustConfig`.
     ///
@@ -31,8 +35,11 @@ public struct EtsiTrustManager: @unchecked Sendable {
     ///   which honors `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`.
     /// - `.staticList`: a bundled-anchors validator via `EudiwIosTrust.usingBundledAnchors(anchors:method:)`
     ///   — no LoTE download, no network.
-    public init(source: TrustSource) {
+    /// - `fallback`: an optional manager used to validate the chain when this manager has no
+    ///   verification context for the requested doc type.
+    public init(source: TrustSource, fallback: EtsiTrustManager? = nil) {
         contextTypeMappings = source.contextTypeMappings
+        self.fallback = fallback
         switch source {
         case .etsi(let etsi):
             let lists = etsi.loteLocations
@@ -57,6 +64,7 @@ public struct EtsiTrustManager: @unchecked Sendable {
                     return nil
                 }
             }
+            cachedValidator = validator
         case .staticList(let staticList):
             let validator = EudiwIosTrust.shared.usingBundledAnchors(anchors: staticList.bundledAnchors, method: staticList.method)
             validateChain = { chain, context in
@@ -69,33 +77,19 @@ public struct EtsiTrustManager: @unchecked Sendable {
                     return nil
                 }
             }
+            cachedValidator = nil
         }
-    }
-
-    /// Convenience initializer for an ETSI LoTE trust source.
-    public init(source: EtsiTrustSource) {
-        self.init(source: .etsi(source))
-    }
-
-    /// Convenience initializer for a static bundled-anchors trust source.
-    public init(source: StaticListTrustSource) {
-        self.init(source: .staticList(source))
     }
 
     /// The verification context this configuration validates certificate chains against
     /// (e.g. PID, Wallet, WRPAC). `EtsiTrustManager` uses it as its single trust context.
-    public var verificationContext: any VerificationContext {
-        if let contextTypeMappings, let docType, let contextType = contextTypeMappings[docType] {
-            return contextType.verificationContext
+    public func getVerificationContext() -> (any VerificationContext)? {
+        if let contextTypeMappings, let docType {
+            guard let contType = contextTypeMappings[docType] else { return nil }
+            return contType.verificationContext
         }
         return EtsiContextType.wrpac.verificationContext
     }
-
-    /// Trust manager for the EC DIGIT acceptance environment.
-    public static let digi: Self = Self(source: .digiTrust)
-
-    /// Trust manager for the EUDI Wallet Reference Implementation environment.
-    public static let eudiRef: Self = Self(source: .eudiRef)
 }
 
 // MARK: - ReaderTrustStore
@@ -113,16 +107,31 @@ extension EtsiTrustManager: CertificateTrustValidator {
 
     public func validateCertTrustPath(chain: [Data]) async -> (Bool, String?) {
         guard let result = await validate(chain: chain) else {
-            return (false, "Certificate chain validation failed")
+            return (false, "Certificate chain validation could not be evaluated")
         }
         return (result.isTrusted, result.failureReason)
     }
 
-    /// Runs the async validator for the configured trust source. Returns `nil` if validation
-    /// throws or the context is unsupported by the validator.
+    /// Validates the chain against the configured trust source, deferring to the fallback manager
+    /// when the primary validation cannot be evaluated (no verification context, no validator
+    /// configured for the context, or the validator throws).
     private func validate(chain: [Data]) async -> IosValidationResult? {
+        if let result = await validatePrimary(chain: chain) { return result }
+        // Primary validation could not be evaluated — defer to the fallback manager if configured.
+        guard let fallback else { return nil }
+        fallback.docType = docType
+        logger.info("Primary trust validation unavailable; delegating to fallback trust manager")
+        return await fallback.validate(chain: chain)
+    }
+
+    /// Runs the async validator for the configured trust source. Returns `nil` if no verification
+    /// context is available, the validator has no configuration for the context, or validation throws.
+    private func validatePrimary(chain: [Data]) async -> IosValidationResult? {
+        guard let verificationContext = getVerificationContext() else { return nil }
         logger.info("Validate chain with context \(verificationContext)")
-        return await validateChain(chain, verificationContext)
+        let iosRes = await validateChain(chain, verificationContext)
+        if let iosRes, !iosRes.isTrusted, iosRes.failureReason == "No validator configured for this context" { return nil }
+        return iosRes
     }
 }
 
