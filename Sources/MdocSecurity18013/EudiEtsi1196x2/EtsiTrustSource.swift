@@ -48,10 +48,7 @@ public struct EtsiTrustSource: @unchecked Sendable {
     ) {
         self.loteLocations = loteLocations
         self.contextTypeMappings = contextTypeMappings
-        //self.fileCacheExpiration = fileCacheExpiration
         self.cacheTtlHours = cacheTtlHours
-        //self.relaxCertificateProfiles = relaxCertificateProfiles
-        //self.relaxPkixRevocation = relaxPkixRevocation
         self.customJwtSignatureVerifier = customJwtSignatureVerifier
         self.loteConstraints = loteConstraints
     }

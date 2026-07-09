@@ -121,7 +121,8 @@ extension EtsiTrustManager: CertificateTrustValidator {
     /// Runs the async validator for the configured trust source. Returns `nil` if validation
     /// throws or the context is unsupported by the validator.
     private func validate(chain: [Data]) async -> IosValidationResult? {
-        await validateChain(chain, verificationContext)
+        logger.info("Validate chain with context \(verificationContext)")
+        return await validateChain(chain, verificationContext)
     }
 }
 

@@ -27,7 +27,7 @@ public enum EtsiContextType: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    var verificationContext: VerificationContext {
+    public var verificationContext: VerificationContext {
         switch self {
         case .pid:    return VerificationContextPID.shared
         case .wallet: return VerificationContextWalletProviderAttestation.shared
