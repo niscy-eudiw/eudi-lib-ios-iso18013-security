@@ -110,30 +110,40 @@ struct MdocSecurity18013Tests {
     }
 
 	@Test("Validate readerAuth CBOR data")
-	func validateReaderAuthCBORData() throws {
+    func validateReaderAuthCBORData() async throws {
 		let (_,sessionEncr) = try #require(try makeSessionEncryptionFromAnnexData())
 		let dr = try DeviceRequest(data: AnnexdTestData.request_d411.bytes)
 		for docR in dr.docRequests {
 			let mdocAuth = MdocReaderAuthentication(transcript: sessionEncr.sessionTranscript)
 			guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
-            let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: [], crlRevocationPolicy: .hardFail)
-			#expect(!b, "Current date not in validity period of Certificate")
-            print(message ?? "")
+            let (b, message) = try await mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, trustValidator: NoopCertificateTrustValidator())
+			#expect(b, "Reader auth Signature not valid")
 		}
 	}
 
     @Test("Validate readerAuth certificate chain trust with root IACA from annex D.4.11")
-    func validateReaderAuthCertificateTrustedWithRootIacaAnnexD411() throws {
+    func validateReaderAuthCertificateTrustedWithRootIacaAnnexD411() async throws {
 		let (_,sessionEncr) = try #require(try makeSessionEncryptionFromAnnexData())
         let dr = try DeviceRequest(data: AnnexdTestData.request_d411.bytes)
-        let rootCert = try #require(SecCertificateCreateWithData(nil, AnnexdTestData.d54_readerRoot as CFData))
-        let rootIaca: [x5chain] = [[rootCert]]
+        let slts = StaticListTrustSource(rootCertificates: [AnnexdTestData.d54_readerRoot])
 		for docR in dr.docRequests {
 			let mdocAuth = MdocReaderAuthentication(transcript: sessionEncr.sessionTranscript)
 			guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
-			let (b, message) = try mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, rootIaca: rootIaca, crlRevocationPolicy: .hardFail)
-			#expect(!b, "Current date not in validity period of Certificate")
-            print(message ?? "")
+            let (b, message) = try await mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, trustValidator: EtsiTrustManager(source: .staticList(slts)))
+            #expect(!b && message!.contains("expired"), "Reader cert expired")
 		}
 	}
+ 
+}
+
+
+struct NoopCertificateTrustValidator: CertificateTrustValidator {
+    func validateCertTrustPath(chain: [Data]) async -> (Bool, String?) {
+        (true, nil)
+    }
+
+    func createCertTrustPath(chain: [Data]) async -> [Data]? {
+        chain
+    }
+    var docType: String?
 }

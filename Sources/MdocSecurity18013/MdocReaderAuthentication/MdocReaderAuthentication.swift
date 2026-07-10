@@ -39,9 +39,8 @@ public struct MdocReaderAuthentication: Sendable {
 		readerAuthCBOR: CBOR,
 		readerAuthX5c: [Data],
 		itemsRequestRawData: [UInt8],
-		rootIaca: [x5chain],
-		crlRevocationPolicy: RevocationPolicy
-	) throws -> (Bool, String?) {
+        trustValidator: (any CertificateTrustValidator)
+	) async throws -> (Bool, String?) {
 		let readerAuthentication = ReaderAuthentication(
 			sessionTranscript: transcript,
 			itemsRequestRawData: itemsRequestRawData
@@ -64,18 +63,8 @@ public struct MdocReaderAuthentication: Sendable {
 			publicKey_x963: readerPublicKeyX963
 		)
 		guard isSignatureValid else { return (false, "Reader auth signature validation failed") }
-		let certificateValidation = SecurityHelpers.isMdocX5cValid(
-			secCerts: secCerts,
-			usage: .mdocReaderAuth,
-			revocationPolicy: crlRevocationPolicy,
-			rootIaca: rootIaca
-		)
-		if !certificateValidation.isValid {
-			let validationMessage = certificateValidation.validationMessages.joined(separator: "\n")
-			logger.warning(Logger.Message(unicodeScalarLiteral: validationMessage))
-		}
-		let validationSummary = certificateValidation.validationMessages.joined(separator: "\n")
-		return (isSignatureValid && certificateValidation.isValid, validationSummary)
+        let (trusted, failureReason) = await trustValidator.validateCertTrustPath(chain: readerAuthX5c)
+		return (isSignatureValid && trusted, failureReason)
 	}
 
 	public init(transcript: SessionTranscript) {
