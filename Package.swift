@@ -17,7 +17,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.13.1"),
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
-        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", revision: "fe25f428471b88e975b6b07814162a2d14abbfe4"),
+        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", exact: "0.4.0-alpha.1-SPM"),
         .package(url: "https://github.com/beatt83/jose-swift.git", from: "6.0.0"),
     ],
     targets: [
