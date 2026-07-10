@@ -129,7 +129,7 @@ struct MdocSecurity18013Tests {
 		for docR in dr.docRequests {
 			let mdocAuth = MdocReaderAuthentication(transcript: sessionEncr.sessionTranscript)
 			guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
-            let (b, message) = try await mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, trustValidator: EtsiTrustManager(source: slts))
+            let (b, message) = try await mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!, trustValidator: EtsiTrustManager(source: .staticList(slts)))
             #expect(!b && message!.contains("expired"), "Reader cert expired")
 		}
 	}

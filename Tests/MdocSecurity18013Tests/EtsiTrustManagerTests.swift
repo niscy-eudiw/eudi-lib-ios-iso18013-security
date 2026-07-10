@@ -49,7 +49,7 @@ struct EtsiTrustManagerTests {
 
     @Test("digi ETSI: validation pipeline completes and the two trust APIs agree")
     func digiEtsiCompletes() async {
-        let manager = EtsiTrustManager.digi
+        let manager = EtsiTrustManager(source: .etsi(.digiTrust))
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("digi ETSI failure reason: \(reason)") }
         let path = await manager.createCertTrustPath(chain: [leaf])
@@ -60,7 +60,7 @@ struct EtsiTrustManagerTests {
 
     @Test("digi ETSI: an untrusted certificate is not trusted")
     func digiEtsiRejectsUntrusted() async {
-        let manager = EtsiTrustManager.digi
+        let manager = EtsiTrustManager(source: .etsi(.digiTrust))
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("digi ETSI failure reason: \(reason)") }
         #expect(trusted == false)
@@ -70,7 +70,7 @@ struct EtsiTrustManagerTests {
 
     @Test("eudiRef ETSI: validation pipeline completes and the two trust APIs agree")
     func eudiRefEtsiCompletes() async {
-        let manager = EtsiTrustManager.eudiRef
+        let manager = EtsiTrustManager(source: .etsi(.eudiRef))
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("eudiRef ETSI failure reason: \(reason)") }
         let path = await manager.createCertTrustPath(chain: [leaf])
@@ -79,7 +79,7 @@ struct EtsiTrustManagerTests {
 
     @Test("eudiRef ETSI: an untrusted certificate is not trusted")
     func eudiRefEtsiRejectsUntrusted() async {
-        let manager = EtsiTrustManager.eudiRef
+        let manager = EtsiTrustManager(source: .etsi(.eudiRef)) 
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("eudiRef ETSI failure reason: \(reason)") }
         #expect(trusted == false)
@@ -89,8 +89,8 @@ struct EtsiTrustManagerTests {
 
     @Test("static list: a leaf issued by the bundled root is trusted (PKIX)")
     func staticListTrustsLeaf() async {
-        let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
-        let manager = EtsiTrustManager(source: config)
+        let staticSource = StaticListTrustSource(rootCertificates: [root], method: .pkix)
+        let manager = EtsiTrustManager(source: .staticList(staticSource))
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("static list failure reason: \(reason)") }
         #expect(trusted)
@@ -102,8 +102,8 @@ struct EtsiTrustManagerTests {
 
     @Test("static list: an unrelated certificate is not trusted")
     func staticListRejectsUnrelated() async {
-        let config = StaticListTrustSource(rootCertificates: [root], context: .wrpac, method: .pkix)
-        let manager = EtsiTrustManager(source: config)
+        let staticSource = StaticListTrustSource(rootCertificates: [root], method: .pkix)
+        let manager = EtsiTrustManager(source: .staticList(staticSource))
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [untrusted])
         if let reason { print("static list failure reason: \(reason)") }
         #expect(trusted == false)
