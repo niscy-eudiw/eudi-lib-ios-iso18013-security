@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#if canImport(EudiEtsi1196x2)
 import Foundation
 
 /// The trust source an `EtsiTrustManager` is built from.
@@ -50,3 +51,4 @@ public enum TrustSource: @unchecked Sendable {
         }
     }
 }
+#endif

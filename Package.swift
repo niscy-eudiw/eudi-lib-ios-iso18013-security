@@ -28,7 +28,7 @@ let package = Package(
             dependencies: [
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
                 .product(name: "X509", package: "swift-certificates"),
-                .product(name: "EudiEtsi1196x2", package: "eudi-lib-kmp-etsi-1196x2"),
+                .product(name: "EudiEtsi1196x2", package: "eudi-lib-kmp-etsi-1196x2", condition: .when(platforms: [.iOS])),
                 .product(name: "jose-swift", package: "jose-swift"),
             ],
             //swiftSettings: [.enableUpcomingFeature("InferIsolatedConformances"), .enableUpcomingFeature("NonisolatedNonsendingByDefault")],

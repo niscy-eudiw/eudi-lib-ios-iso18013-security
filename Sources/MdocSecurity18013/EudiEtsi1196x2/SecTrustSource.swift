@@ -20,7 +20,7 @@ import Security
 /// A trust source backed by the platform Security framework: it validates certificate chains
 /// against a set of bundled root (IACA) anchors via `SecurityHelpers.isMdocX5cValid`, with no
 /// LoTE download and no network beyond CRL fetches.
-///  **Unused** for now.
+/// Can be used in non-iOS platforms where EudiEtsi1196x2 module is not available .
 public struct SecTrustSource: CertificateTrustValidator, @unchecked Sendable {
     /// DER-encoded trust anchor chains; each inner array is a root chain with the root last.
     public let rootIaca: [[Data]]
