@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#if canImport(EudiEtsi1196x2)
 import EudiEtsi1196x2
 import OrderedCollections
 
@@ -43,3 +44,4 @@ public typealias EtsiContextTypeMappings = OrderedDictionary<String, EtsiContext
 public extension OrderedDictionary where Key == String, Value == EtsiContextType {
     static let `default`: Self = ["eu.europa.ec.eudi.pid.1": .pid, "urn:eudi:pid:1": .pid, "org.iso.18013.5.1.mDL": .mdl]
 }
+#endif

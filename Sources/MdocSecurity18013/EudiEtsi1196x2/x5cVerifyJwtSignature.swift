@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#if canImport(EudiEtsi1196x2)
 import Foundation
 import Security
 import EudiEtsi1196x2
@@ -67,3 +69,4 @@ public final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendabl
     }
 
 }
+#endif

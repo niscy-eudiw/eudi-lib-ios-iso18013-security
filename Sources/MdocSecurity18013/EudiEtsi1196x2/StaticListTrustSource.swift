@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#if canImport(EudiEtsi1196x2)
 import Foundation
 import EudiEtsi1196x2
 
@@ -74,3 +75,4 @@ public struct StaticListTrustSource: @unchecked Sendable {
         return anchors
     }
 }
+#endif
