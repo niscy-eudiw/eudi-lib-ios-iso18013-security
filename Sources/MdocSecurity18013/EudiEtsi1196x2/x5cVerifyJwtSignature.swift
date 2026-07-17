@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #if canImport(EudiEtsi1196x2)
+#if canImport(JSONWebSignature)
 import Foundation
 import Security
 import EudiEtsi1196x2
@@ -69,4 +70,5 @@ public final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendabl
     }
 
 }
+#endif
 #endif
