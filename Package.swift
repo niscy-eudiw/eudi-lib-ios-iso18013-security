@@ -29,7 +29,7 @@ let package = Package(
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
                 .product(name: "X509", package: "swift-certificates"),
                 .product(name: "EudiEtsi1196x2", package: "eudi-lib-kmp-etsi-1196x2", condition: .when(platforms: [.iOS])),
-                .product(name: "jose-swift", package: "jose-swift"),
+                .product(name: "jose-swift", package: "jose-swift", condition: .when(platforms: [.iOS, .macOS])),
             ],
             //swiftSettings: [.enableUpcomingFeature("InferIsolatedConformances"), .enableUpcomingFeature("NonisolatedNonsendingByDefault")],
         ),
