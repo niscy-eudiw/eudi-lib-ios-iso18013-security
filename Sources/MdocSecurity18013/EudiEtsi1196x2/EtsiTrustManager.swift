@@ -18,6 +18,7 @@ limitations under the License.
 import Foundation
 import Security
 import EudiEtsi1196x2
+import JSONWebSignature
 
 public final class EtsiTrustManager: @unchecked Sendable {
     // Type-erased validation over the selected trust source; returns `nil` if validation throws
@@ -27,20 +28,23 @@ public final class EtsiTrustManager: @unchecked Sendable {
     private let validateChain: ([Data], any VerificationContext) async -> IosValidationResult?
     let contextTypeMappings: EtsiContextTypeMappings?
     public var docType: String?
+    let defaultVerificationContext: (any VerificationContext)?
 
     // Fallback manager consulted when this manager cannot evaluate the chain.
     private let fallback: EtsiTrustManager?
 
     /// Builds a trust manager from the selected `TrustConfig`.
     ///
+    /// - source: Trust source
     /// - `.etsi`: a cached LoTE validator via `EudiwIosTrust.cached(urls:ttlHours:verifyJwtSignature:)`,
     ///   which honors `loteLocations`, `cacheTtl`, and `customJwtSignatureVerifier`.
     /// - `.staticList`: a bundled-anchors validator via `EudiwIosTrust.usingBundledAnchors(anchors:method:)`
     ///   — no LoTE download, no network.
-    /// - `fallback`: an optional manager used to validate the chain when this manager has no
-    ///   verification context for the requested doc type.
-    public init(source: TrustSource, fallback: EtsiTrustManager? = nil) {
+    /// - defaultVerificationContext
+    /// - `fallback`: an optional manager used to validate the chain when this manager has no  verification context for the requested doc type.
+    public init(source: TrustSource, defaultVerificationContext: (any VerificationContext)? = nil, fallback: EtsiTrustManager? = nil) {
         contextTypeMappings = source.contextTypeMappings
+        self.defaultVerificationContext = defaultVerificationContext
         self.fallback = fallback
         switch source {
         case .etsi(let etsi):
@@ -54,7 +58,7 @@ public final class EtsiTrustManager: @unchecked Sendable {
             urls.qeaProviders = lists.qeaProviders as String?
             urls.mdlProviders = lists.eaaProviders[EudiwIosTrust.shared.mdlUseCase] as String?
 
-            let verifyJwtSignature: VerifyJwtSignature = etsi.customJwtSignatureVerifier ?? x5cVerifyJwtSignature.shared
+            let verifyJwtSignature: VerifyJwtSignature = etsi.customJwtSignatureVerifier ?? x5cVerifyJwtOrCwt.shared
             let validator = EudiwIosTrust.shared.cached(urls: urls, ttlHours: etsi.cacheTtlHours, verifyJwtSignature: verifyJwtSignature)
             validateChain = { chain, context in
                 do {
@@ -90,7 +94,7 @@ public final class EtsiTrustManager: @unchecked Sendable {
             guard let contType = contextTypeMappings[docType] else { return nil }
             return contType.verificationContext
         }
-        return EtsiContextType.wrpac.verificationContext
+        return defaultVerificationContext
     }
 }
 
@@ -136,5 +140,14 @@ extension EtsiTrustManager: CertificateTrustValidator {
         return iosRes
     }
 }
+
+extension x5cVerifyJwtOrCwt: VerifyJwtSignature {
+    public func invoke(jwt: String) async throws -> any VerifyJwtSignatureOutcome {
+        let jws = try JWS(jwsString: jwt)
+        try Self.verify(jws: jws)
+        return VerifyJwtSignatureOutcomeVerified(jwt: jwt)
+    }
+}
+
 #endif
 
