@@ -54,7 +54,7 @@ public struct StaticListTrustSource: @unchecked Sendable {
         contextTypeMappings: EtsiContextTypeMappings? = nil
     ) {
         self.init(
-            anchorsPerContext: [.pid: rootCertificates, .mdl: rootCertificates, .wallet: rootCertificates, .wrpac: rootCertificates],
+            anchorsPerContext: [.pid: rootCertificates, .mdl: rootCertificates, .wallet: rootCertificates, .wrpac: rootCertificates, .wrprc: rootCertificates],
             method: method,
             contextTypeMappings: contextTypeMappings
         )

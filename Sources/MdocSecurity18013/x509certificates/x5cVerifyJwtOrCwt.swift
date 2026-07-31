@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if canImport(EudiEtsi1196x2)
 #if canImport(JSONWebSignature)
 import Foundation
+import MdocDataModel18013
 import Security
-import EudiEtsi1196x2
 import JSONWebSignature
 
 /// A ``VerifyJwtSignature`` implementation that verifies a LoTE JWS using the X.509
@@ -32,27 +31,19 @@ import JSONWebSignature
 /// This performs the cryptographic signature check only; anchoring the `x5c` chain to a
 /// trusted scheme operator is handled by the certificate-profile validation of the
 /// surrounding trust pipeline.
-public final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendable {
-    public static let shared = x5cVerifyJwtSignature()
+public final class x5cVerifyJwtOrCwt: @unchecked Sendable {
+    public static let shared = x5cVerifyJwtOrCwt()
+    nonisolated(unsafe) public static let compactJWSRegex = #/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/#
 
     public init() {}
 
-    public func invoke(jwt: String) async throws -> any VerifyJwtSignatureOutcome {
-    	try Self.verify(jwt: jwt)
-		return VerifyJwtSignatureOutcomeVerified(jwt: jwt)
-    }
-
-    /// Verify the JWS signature against the leaf certificate carried in the `x5c` header,
-    /// using the `jose-swift` `JWS` implementation.
-    ///
+    /// Verify the JWS signature against the leaf certificate carried in the `x5c` header,  using the `jose-swift` `JWS` implementation.
     /// `jose-swift` selects the verification algorithm from the JWS `alg` header and supports the
     /// ECDSA (`ES256` / `ES384` / `ES512`) and RSASSA-PKCS1-v1_5 (`RS256` / `RS384` / `RS512`)
     /// schemes used by the EUDI trust lists.
     /// - Throws: `JWS.JWSError` when the token is malformed, the verifying key is missing, or the
     ///   signature is invalid. Parse and verification failures are propagated from `jose-swift`.
-    public static func verify(jwt: String) throws {
-        // `JWS(jwsString:)` throws `JWS.JWSError.invalidString` for a malformed token.
-        let jws = try JWS(jwsString: jwt)
+    public static func verify(jws: JWS) throws {
         // x5c entries are base64 (standard, not base64url) DER certificates; the leaf is first.
         guard let leafBase64 = jws.protectedHeader.x509CertificateChain?.first,
               let certData = Data(base64Encoded: leafBase64) else {
@@ -68,7 +59,34 @@ public final class x5cVerifyJwtSignature: VerifyJwtSignature, @unchecked Sendabl
             throw JWS.JWSError.somethingWentWrong
         }
     }
+    
+    public static func parse(attestData: Data, format: AttestToken.Format?) throws -> AttestToken {
+        let text = String(data: attestData, encoding: .ascii)?.trimmingCharacters(in: .whitespaces) ?? ""
+        if (format == nil && text.wholeMatch(of: compactJWSRegex) != nil) || format == .jwt {
+            guard let jwtString = String(data: attestData, encoding: .utf8) else { throw JWS.JWSError.invalidString }
+            let jws = try JWS(jwsString: jwtString)
+            return .jwt(jws)
+        } else {
+            let readerAuth = try ReaderAuth(data: [UInt8](attestData))
+            return .cwt(readerAuth)
+        }
+    }
 
+    public static func validateTrust(_ attestToken: AttestToken, trustValidator: CertificateTrustValidator) async throws -> (Bool, String?) {
+        let certsData: [Data]
+        switch attestToken {
+        case let .jwt(jws):
+            try Self.verify(jws: jws)
+            guard let b64certs = jws.protectedHeader.x509CertificateChain else { throw JWS.JWSError.somethingWentWrong }
+            certsData = b64certs.compactMap { Data(base64Encoded: $0) }
+            guard certsData.count == b64certs.count else { throw JWS.JWSError.somethingWentWrong }
+        case let .cwt(readerAuth):
+            certsData = readerAuth.x5chain.map { Data($0) }
+        }
+        guard certsData.count > 0 else { throw JWS.JWSError.somethingWentWrong }
+        return await trustValidator.validateCertTrustPath(chain: certsData)
+    }
 }
 #endif
-#endif
+
+
