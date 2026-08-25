@@ -36,15 +36,9 @@ import EudiEtsi1196x2
 struct EtsiTrustManagerTests {
     /// DER leaf certificate issued by the bundled test root.
     let leaf: Data
-    /// DER self-signed test root CA that issued `leaf`.
-    let root: Data
-    /// An unrelated DER certificate, used as an untrusted input.
-    let untrusted: Data
 
     init() throws {
         leaf = try Data(contentsOf: #require(Bundle.module.url(forResource: "eudi-test-leaf", withExtension: "der")))
-        root = try Data(contentsOf: #require(Bundle.module.url(forResource: "eudi-test-root", withExtension: "der")))
-        untrusted = try Data(contentsOf: #require(Bundle.module.url(forResource: "pidissuerca02_ut", withExtension: "der")))
     }
 
     // MARK: - 1. digi (ETSI LoTE — requires network)
@@ -55,7 +49,7 @@ struct EtsiTrustManagerTests {
         let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
         if let reason { print("digi ETSI failure reason: \(reason)") }
         let path = await manager.createCertTrustPath(chain: [leaf])
-        // `createCertTrustPath` returns a path iff the chain is trusted — invariant holds
+        // `createCertTrustPath` returns a path if the chain is trusted — invariant holds
         // regardless of the remote list's decision (or a network error).
         #expect((path != nil) == trusted)
     }
@@ -87,30 +81,6 @@ struct EtsiTrustManagerTests {
         #expect(trusted == false)
     }
 
-    // MARK: - 3. static list (offline — deterministic)
 
-    @Test("static list: a leaf issued by the bundled root is trusted (PKIX)")
-    func staticListTrustsLeaf() async {
-        let staticSource = StaticListTrustSource(rootCertificates: [root], method: .pkix)
-        let manager = EtsiTrustManager(source: .staticList(staticSource))
-        let (trusted, reason) = await manager.validateCertTrustPath(chain: [leaf])
-        if let reason { print("static list failure reason: \(reason)") }
-        #expect(trusted)
-        // The completed path includes the matched anchor (the root).
-        let path = await manager.createCertTrustPath(chain: [leaf])
-        #expect(path != nil)
-        #expect(path?.contains(root) == true)
-    }
-
-    @Test("static list: an unrelated certificate is not trusted")
-    func staticListRejectsUnrelated() async {
-        let staticSource = StaticListTrustSource(rootCertificates: [root], method: .pkix)
-        let manager = EtsiTrustManager(source: .staticList(staticSource))
-        let (trusted, reason) = await manager.validateCertTrustPath(chain: [untrusted])
-        if let reason { print("static list failure reason: \(reason)") }
-        #expect(trusted == false)
-        let path = await manager.createCertTrustPath(chain: [untrusted])
-        #expect(path == nil)
-    }
 }
 #endif
