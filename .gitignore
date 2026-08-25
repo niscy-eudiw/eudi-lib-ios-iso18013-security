@@ -9,3 +9,4 @@ DerivedData/
 .netrc
 /fastlane/test_output
 fastlane/report.xml
+/xcov_output
