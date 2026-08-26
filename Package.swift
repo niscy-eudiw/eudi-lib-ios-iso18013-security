@@ -17,7 +17,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.13.1"),
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
-        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2.git", exact: "0.4.0-alpha.1-SPM"),
         .package(url: "https://github.com/beatt83/jose-swift.git", from: "6.0.4"),
     ],
     targets: [
@@ -28,15 +27,23 @@ let package = Package(
             dependencies: [
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
                 .product(name: "X509", package: "swift-certificates"),
-                .product(name: "EudiEtsi1196x2", package: "eudi-lib-kmp-etsi-1196x2", condition: .when(platforms: [.iOS])),
+                .target(name: "EudiEtsi1196x2", condition: .when(platforms: [.iOS])),
                 .product(name: "jose-swift", package: "jose-swift", condition: .when(platforms: [.iOS, .macOS])),
             ],
-            //swiftSettings: [.enableUpcomingFeature("InferIsolatedConformances"), .enableUpcomingFeature("NonisolatedNonsendingByDefault")],
+            swiftSettings: [
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+            ]
         ),
         .testTarget(
             name: "MdocSecurity18013Tests",
             dependencies: ["MdocSecurity18013"],
             resources: [.process("Resources")]
+        ),
+        .binaryTarget(
+            name: "EudiEtsi1196x2",
+            url: "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2/releases/download/v0.4.0-alpha.1/EudiEtsi1196x2.xcframework.zip",
+            checksum: "ebbfaf8ea1bcde8a96b226cc8e400351bac895198b546473b9c8159574963fac"
         )
     ]
 )
