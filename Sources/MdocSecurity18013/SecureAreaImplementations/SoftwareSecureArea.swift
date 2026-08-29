@@ -58,6 +58,7 @@ public actor SoftwareSecureArea: SecureArea {
     ) async throws -> [CoseKey] {
         let ecCurve = keyOptions?.curve ?? .P256
         let batchSize = credentialOptions.batchSize
+        if batchSize <= 0 { throw SecureAreaError("Batch size must be greater than 0") }
         var publicKeys: [CoseKey] = []
         publicKeys.reserveCapacity(batchSize)
         var privateKeyRecords = [[String: Data]]()
@@ -68,29 +69,31 @@ public actor SoftwareSecureArea: SecureArea {
             publicKeys.append(CoseKey(crv: ecCurve, x963Representation: x963Pub))
         }
         let initialUsageCounts = Array(repeating: 0, count: batchSize)
-        let kbi = KeyBatchInfo(
-            secureAreaName: Self.name,
-            crv: ecCurve,
-            usedCounts: initialUsageCounts,
-            credentialPolicy: credentialOptions.credentialPolicy
-        )
-        guard let kbiData = kbi.toData() else { throw SecureAreaError("Failed to encode KeyBatchInfo") }
+        let keyBatchInfo = KeyBatchInfo(secureAreaName: Self.name, crv: ecCurve, usedCounts: initialUsageCounts, credentialPolicy: credentialOptions.credentialPolicy)
+        guard let kbiData = keyBatchInfo.toData() else { throw SecureAreaError("Failed to encode KeyBatchInfo") }
         let curveNameData = ecCurve.jwkName.data(using: .utf8)!
+        let publicKey0Data = publicKeys.first!.x963Representation.base64EncodedString().data(using: .utf8)!
         let keyInfoRecord: [String: Data] = [
             kSecValueData as String: kbiData,
             kSecAttrDescription as String: curveNameData,
+            kSecAttrComment as String: publicKey0Data,
         ]
         try await storage.writeKeyInfo(id: id, dict: keyInfoRecord)
-        try await storage.writeKeyDataBatch(
-            id: id,
-            startIndex: 0,
-            dicts: privateKeyRecords,
-            keyOptions: keyOptions
-        )
+        try await storage.writeKeyDataBatch(id: id, startIndex: 0, dicts: privateKeyRecords, keyOptions: keyOptions)
         return publicKeys
     }
-    
+
     public func getPublicKey(id: String, index: Int, curve: CoseEcCurve) async throws -> CoseKey {
+        switch curve { case .P256, .P384, .P521: break
+        default: throw SecureAreaError("Unsupported curve \(curve)")
+        }
+        let keyInfo = try await storage.readKeyInfo(id: id)
+        guard let publicKey0DataEnc = keyInfo[kSecAttrComment as String], !publicKey0DataEnc.isEmpty, let publicKey0DataBase64 = String(data: publicKey0DataEnc, encoding: .utf8), let publicKey0Data = Data(base64Encoded: publicKey0DataBase64) else {
+            throw SecureAreaError("Public key info not found")
+        }
+        if index == 0 {
+            return CoseKey(crv: curve, x963Representation: publicKey0Data)
+        }
         let x963Priv = try await getKeyData(id: id, index: index)
         switch curve {
         case .P256:
