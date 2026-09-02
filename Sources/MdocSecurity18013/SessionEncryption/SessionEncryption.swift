@@ -41,13 +41,14 @@ public struct SessionEncryption: Sendable {
 	var deviceEngagementRawData: [UInt8]
 	let eReaderKeyRawData: [UInt8]
 	let handOver: CBOR
+    let authenticationContext: ThreadSafeAuthContext
 
 	/// Initialization of session encryption for the mdoc
 	/// - Parameters:
 	///   - se: session establishment data from the mdoc reader
 	///   - de: device engagement created by the mdoc
 	///   - handOver: handover object according to the transfer protocol
-	public init?(se: SessionEstablishment, de: DeviceEngagement, handOver: CBOR) {
+	public init?(se: SessionEstablishment, de: DeviceEngagement, handOver: CBOR, authenticationContext: ThreadSafeAuthContext) {
 		sessionRole = .mdoc
 		deviceEngagementRawData = de.qrCoded ?? de.encode(options: CBOROptions())
 		guard let devicePrivateKey = de.privateKey else {
@@ -65,6 +66,7 @@ public struct SessionEncryption: Sendable {
 		}
 		sessionKeys = CoseKeyExchange(publicKey: readerPublicKey, privateKey: devicePrivateKey)
 		self.handOver = handOver
+        self.authenticationContext = authenticationContext
 	}
 
 	/// Make nonce function to initialize the encryption or decryption
@@ -138,7 +140,7 @@ public struct SessionEncryption: Sendable {
 	/// Session keys are derived using ECKA-DH (Elliptic Curve Key Agreement
 	/// Algorithm – Diffie-Hellman) as defined in BSI TR-03111
 	mutating func makeKeyAgreementAndDeriveSessionKey(isEncrypt: Bool) async throws -> SymmetricKey  {
-		let sharedKey = try await sessionKeys.makeEckaDHAgreement()
+        let sharedKey = try await sessionKeys.makeEckaDHAgreement(authenticationContext: authenticationContext)
 		let keyInfo = getInfo(isEncrypt: isEncrypt).data(using: .utf8)!
 		let symmetricKey = try Self.HMACKeyDerivationFunction(
 			sharedSecret: sharedKey,

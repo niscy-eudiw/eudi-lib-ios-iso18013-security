@@ -16,6 +16,7 @@ limitations under the License.
 
 import Foundation
 import CryptoKit
+@preconcurrency import LocalAuthentication
 import MdocDataModel18013
 
 /// Secure Enclave secure area
@@ -38,11 +39,7 @@ public actor SecureEnclaveSecureArea: SecureArea {
     }
     public func getStorage() async -> any MdocDataModel18013.SecureKeyStorage { storage }
 
-    public func createKeyBatch(
-        id: String,
-        credentialOptions: CredentialOptions,
-        keyOptions: KeyOptions?
-    ) async throws -> [CoseKey] {
+    public func createKeyBatch(id: String, credentialOptions: CredentialOptions, keyOptions: KeyOptions?) async throws -> [CoseKey] {
         if let keyOptions, keyOptions.curve != Self.defaultEcCurve { throw SecureAreaError("Unsupported curve \(keyOptions.curve)") }
         let batchSize = credentialOptions.batchSize
         if batchSize <= 0 { throw SecureAreaError("Batch size must be greater than 0") }
@@ -52,7 +49,7 @@ public actor SecureEnclaveSecureArea: SecureArea {
         privateKeyRecords.reserveCapacity(batchSize)
         // create extra keys and save them as a batch with indexes from 1 to batch-size
         for _ in 0..<batchSize {
-            let key = try SecureEnclave.P256.KeyAgreement.PrivateKey()
+            let key = try SecureEnclave.P256.KeyAgreement.PrivateKey(accessControl: SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, [], nil)!)
             privateKeyRecords.append([kSecValueData as String: key.dataRepresentation])
             publicKeys.append(CoseKey(crv: .P256, x963Representation: key.publicKey.x963Representation))
         }
@@ -78,7 +75,7 @@ public actor SecureEnclaveSecureArea: SecureArea {
             throw SecureAreaError("Public key info not found")
         }
         if index == 0 { return CoseKey(crv: .P256, x963Representation: publicKey0Data) }
-        let signingKey = try await getPrivateKey(id: id, index: index)
+        let signingKey = try await getPrivateKey(id: id, index: index, authenticationContext: ThreadSafeAuthContext())
         return CoseKey(crv: .P256, x963Representation: signingKey.publicKey.x963Representation)
     }
 
@@ -91,28 +88,30 @@ public actor SecureEnclaveSecureArea: SecureArea {
         try await storage.deleteKeyInfo(id: id)
     }
 
-    private func getPrivateKey(id: String, index: Int) async throws -> SecureEnclave.P256.Signing.PrivateKey {
-        let keyDataDict = try await storage.readKeyData(id: id, index: index)
+    private func getPrivateKey(id: String, index: Int, authenticationContext: ThreadSafeAuthContext) async throws -> SecureEnclave.P256.Signing.PrivateKey {
+        let keyDataDict = try await storage.readKeyData(id: id, index: index, authenticationContext: authenticationContext)
         guard let dataRepresentation = keyDataDict[kSecValueData as String] else {
             throw SecureAreaError("Key data not found")
         }
-        let signingKey = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: dataRepresentation)
+        let signingKey = try authenticationContext.withLAContext { try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: dataRepresentation, authenticationContext: $0) }
+        guard let signingKey else { throw SecureAreaError("Private Signing key data not found") }
         return signingKey
     }
     /// compute signature
-    public func signature(id: String, index: Int, algorithm: SigningAlgorithm, dataToSign: Data, unlockData: Data?) async throws -> Data {
+    public func signature(id: String, index: Int, algorithm: SigningAlgorithm, dataToSign: Data, unlockData: Data?, authenticationContext: ThreadSafeAuthContext) async throws -> Data {
         guard algorithm == .ES256 else { throw SecureAreaError("Unsupported algorithm \(algorithm)") }
-        let signingKey = try await getPrivateKey(id: id, index: index)
+        let signingKey = try await getPrivateKey(id: id, index: index, authenticationContext: authenticationContext)
         let signature = try signingKey.signature(for: dataToSign)
         logger.info("Creating signature for id: \(id), key index \(index)")
         return signature.rawRepresentation
     }
 
     /// make shared secret with other public key
-    public func keyAgreement(id: String, index: Int, publicKey: CoseKey, unlockData: Data?) async throws -> SharedSecret {
+    public func keyAgreement(id: String, index: Int, publicKey: CoseKey, unlockData: Data?, authenticationContext: ThreadSafeAuthContext) async throws -> SharedSecret {
         let puk256 = try P256.KeyAgreement.PublicKey(x963Representation: publicKey.x963Representation)
-        let signingKey = try await getPrivateKey(id: id, index: index)
-        let prk256 = try SecureEnclave.P256.KeyAgreement.PrivateKey(dataRepresentation: signingKey.dataRepresentation)
+        let signingKey = try await getPrivateKey(id: id, index: index, authenticationContext: authenticationContext)
+        let prk256 = try authenticationContext.withLAContext { try SecureEnclave.P256.KeyAgreement.PrivateKey(dataRepresentation: signingKey.dataRepresentation, authenticationContext: $0) }
+        guard let prk256 else { throw SecureAreaError("Private key for key agreement not found") }
         logger.info("Creating key agreement for id: \(id), key index \(index)")
         let sharedSecret = try prk256.sharedSecretFromKeyAgreement(with: puk256)
         return sharedSecret

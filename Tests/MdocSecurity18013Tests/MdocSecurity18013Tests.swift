@@ -63,7 +63,7 @@ struct MdocSecurity18013Tests {
         let se: SessionEstablishment = try SessionEstablishment(cbor: dse)
         var de = try DeviceEngagement(data: transcript.devEngRawData!)
         de.privateKey = Self.AnnexdTestData.d51_ephDeviceKey
-        var sessionEncr = try #require(SessionEncryption(se: se, de: de, handOver: transcript.handOver))
+        var sessionEncr = try #require(SessionEncryption(se: se, de: de, handOver: transcript.handOver, authenticationContext: ThreadSafeAuthContext()))
 		sessionEncr.deviceEngagementRawData = try #require(transcript.devEngRawData) // cbor encoding differs between implemenentations, for mDL with our own implementation they will be identical
         return (se, sessionEncr)
     }
@@ -103,7 +103,8 @@ struct MdocSecurity18013Tests {
             docType: "org.iso.18013.5.1.mDL",
             dauthMethod: bUseDeviceSign ? .deviceSignature : .deviceMac,
             deviceNameSpaces: nil,
-            unlockData: nil)
+            unlockData: nil,
+            authenticationContext: ThreadSafeAuthContext())
 		let deviceAuth = try #require(dAuthO)
         let ourDeviceAuthCBORbytes = deviceAuth.encode(options: CBOROptions())
         #expect(Data(ourDeviceAuthCBORbytes) == AnnexdTestData.d53_deviceAuthCBORdata)
@@ -138,7 +139,7 @@ struct MdocSecurity18013Tests {
             print(message ?? "Reader auth certificate chain is trusted")
 		}
 	}
- 
+
 }
 
 
