@@ -46,8 +46,8 @@ public struct MdocAuthentication: Sendable {
 	/// Calculate the ephemeral MAC key, by performing ECKA-DH (Elliptic Curve Key Agreement Algorithm – Diffie-Hellman)
 	/// The inputs shall be the SDeviceKey.Priv and EReaderKey.Pub for the mdoc
 	/// and EReaderKey.Priv and SDeviceKey.Pub for the mdoc reader.
-    func makeMACKeyAggrementAndDeriveKey(deviceAuth: DeviceAuthentication) async throws -> SymmetricKey? {
-		let sharedKey = try await authKeys.makeEckaDHAgreement()
+    func makeMACKeyAggrementAndDeriveKey(deviceAuth: DeviceAuthentication, unlockData: Data? = nil, authenticationContext: ThreadSafeAuthContext) async throws -> SymmetricKey? {
+		let sharedKey = try await authKeys.makeEckaDHAgreement(unlockData: unlockData, authenticationContext: authenticationContext)
 		let emacInfo = "EMacKey".data(using: .utf8)!
 		let symmetricKey = try SessionEncryption.HMACKeyDerivationFunction(
 			sharedSecret: sharedKey,
@@ -67,7 +67,8 @@ public struct MdocAuthentication: Sendable {
         docType: String,
         dauthMethod: DeviceAuthMethod,
         deviceNameSpaces: DeviceNameSpaces?,
-        unlockData: Data?
+        unlockData: Data?,
+        authenticationContext: ThreadSafeAuthContext
     ) async throws -> DeviceAuth? {
 		let deviceAuthentication = DeviceAuthentication(
 			sessionTranscript: sessionTranscript,
@@ -83,11 +84,12 @@ public struct MdocAuthentication: Sendable {
 				payloadData: Data(contentBytes),
 				deviceKey: authKeys.privateKey,
 				alg: .es256,
-				unlockData: unlockData
+				unlockData: unlockData,
+				authenticationContext: authenticationContext
 			)
 		} else {
             // this is the preferred method
-			guard let symmetricKey = try await self.makeMACKeyAggrementAndDeriveKey(deviceAuth: deviceAuthentication) else {
+			guard let symmetricKey = try await self.makeMACKeyAggrementAndDeriveKey(deviceAuth: deviceAuthentication, unlockData: unlockData, authenticationContext: authenticationContext) else {
 				return nil
 			}
 			detachedAuthCose = Cose.makeDetachedCoseMac0(
