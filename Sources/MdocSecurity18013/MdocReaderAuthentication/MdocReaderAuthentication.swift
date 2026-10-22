@@ -48,6 +48,36 @@ public struct MdocReaderAuthentication: Sendable {
 		let contentBytes = readerAuthentication.toCBOR(options: CBOROptions())
 			.taggedEncoded
 			.encode(options: CBOROptions())
+		return try await validate(readerAuthCBOR: readerAuthCBOR, readerAuthX5c: readerAuthX5c,
+            contentBytes: contentBytes, trustValidator: trustValidator)
+    }
+
+    /// Validate one signature covering the entire version 1.1 DeviceRequest.
+    /// Each supplied signature must be checked; trust policy is provided by the caller.
+    public func validateReaderAuthAll(
+        readerAuthCBOR: CBOR,
+        readerAuthX5c: [Data],
+        deviceRequest: DeviceRequest,
+        trustValidator: any CertificateTrustValidator
+    ) async throws -> (Bool, String?) {
+        guard deviceRequest.version == "1.1" else { return (false, "readerAuthAll requires DeviceRequest version 1.1") }
+        let items = deviceRequest.docRequests.compactMap(\.itemsRequestRawData)
+        guard items.count == deviceRequest.docRequests.count,
+              deviceRequest.deviceRequestInfo == nil || deviceRequest.deviceRequestInfoRawData != nil else {
+            return (false, "Original request bytes missing")
+        }
+        let authentication = ReaderAuthenticationAll(sessionTranscript: transcript, itemsRequestRawData: items,
+            deviceRequestInfoRawData: deviceRequest.deviceRequestInfoRawData)
+        let contentBytes = authentication.toCBOR(options: CBOROptions()).taggedEncoded.encode()
+        return try await validate(readerAuthCBOR: readerAuthCBOR, readerAuthX5c: readerAuthX5c,
+            contentBytes: contentBytes, trustValidator: trustValidator)
+    }
+
+    private func validate(readerAuthCBOR: CBOR, readerAuthX5c: [Data], contentBytes: [UInt8],
+                          trustValidator: any CertificateTrustValidator) async throws -> (Bool, String?) {
+        guard let parsed = try? ReaderAuth(cbor: readerAuthCBOR), parsed.coseSign1.payload == .null, parsed.x5chain.map({ Data($0) }) == readerAuthX5c else {
+            return (false, "Invalid reader auth CBOR or certificate chain")
+        }
 		let secCerts = readerAuthX5c.compactMap { SecCertificateCreateWithData(nil, $0 as CFData) }
 		let hasMatchingCertificateCount = !secCerts.isEmpty && secCerts.count == readerAuthX5c.count
 		guard hasMatchingCertificateCount else { return (false, "Invalid reader Auth Certificate") }
@@ -65,7 +95,7 @@ public struct MdocReaderAuthentication: Sendable {
 		guard isSignatureValid else { return (false, "Reader auth signature validation failed") }
         let (trusted, failureReason) = await trustValidator.validateCertTrustPath(chain: readerAuthX5c)
 		return (isSignatureValid && trusted, failureReason)
-	}
+    }
 
 	public init(transcript: SessionTranscript) {
 		self.transcript = transcript
