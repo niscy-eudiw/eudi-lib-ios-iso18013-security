@@ -1,5 +1,5 @@
 {
-  "originHash" : "5c752fa36dfcc30f951a211ab5bfff35a96e43f94ea40caaea14ead0f71108ad",
+  "originHash" : "62f382a14d4aa9b70afc52aaa04b247b41db75e6ad216619a778674f67077917",
   "pins" : [
     {
       "identity" : "cryptoswift",
@@ -15,7 +15,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/niscy-eudiw/eudi-lib-ios-iso18013-data-model.git",
       "state" : {
-        "revision" : "02484ec06d206ef57d625cc31f10efcb3287e368"
+        "revision" : "b87ee2767bd68ccd3262c70743f3651a59b08664"
       }
     },
     {
