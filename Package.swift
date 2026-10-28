@@ -13,7 +13,7 @@ let package = Package(
             targets: ["MdocSecurity18013"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/niscy-eudiw/eudi-lib-ios-iso18013-data-model.git", revision: "b87ee2767bd68ccd3262c70743f3651a59b08664"),
+        .package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git", from: "0.28.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.13.1"),
         .package(url: "https://github.com/apple/swift-certificates.git", .upToNextMajor(from: "1.0.0")),
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
