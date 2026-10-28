@@ -64,22 +64,9 @@ public final class EtsiTrustManager: @unchecked Sendable {
             let directTrust = ValidateCertificateChainUsingDirectTrustIosKt.ValidateCertificateChainUsingDirectTrustIos
             let pkix = ValidateCertificateChainUsingPKIXIos.companion.invoke(isRevocationEnabled: etsi.isRevocationEnabled)
             let validator = if let loadLoTE = etsi.loadLoTE {
-                EudiwIosTrust.shared.cached(
-                    urls: urls,
-                    ttlHours: etsi.cacheTtlHours,
-                    verifyJwtSignature: verifyJwtSignature,
-                    loadLoTE: loadLoTE,
-                    directTrust: directTrust,
-                    pkix: pkix
-                )
+                EudiwIosTrust.shared.cached(urls: urls, ttlHours: etsi.cacheTtlHours, verifyJwtSignature: verifyJwtSignature, loadLoTE: loadLoTE, directTrust: directTrust, pkix: pkix)
             } else {
-                EudiwIosTrust.shared.cached(
-                    urls: urls,
-                    ttlHours: etsi.cacheTtlHours,
-                    verifyJwtSignature: verifyJwtSignature,
-                    directTrust: directTrust,
-                    pkix: pkix
-                )
+                EudiwIosTrust.shared.cached(urls: urls, ttlHours: etsi.cacheTtlHours, verifyJwtSignature: verifyJwtSignature, directTrust: directTrust, pkix: pkix)
             }
             validateChain = { chain, context in
                 do {

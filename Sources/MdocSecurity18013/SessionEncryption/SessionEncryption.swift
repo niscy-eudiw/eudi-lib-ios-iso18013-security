@@ -43,6 +43,7 @@ public enum SessionEncryptionError: Error, Equatable, Sendable {
 /// ```
 public struct SessionEncryption: Sendable {
 	public let sessionRole: SessionRole
+    private let engagement: DeviceEngagement
     struct MessageCounters: Sendable {
         var encryption: UInt64 = 1
         var decryption: UInt64 = 1
@@ -70,6 +71,7 @@ public struct SessionEncryption: Sendable {
 	///   - handOver: handover object according to the transfer protocol
 	public init?(se: SessionEstablishment, de: DeviceEngagement, handOver: CBOR, authenticationContext: ThreadSafeAuthContext) {
 		sessionRole = .mdoc
+        engagement = de
 		deviceEngagementRawData = de.qrCoded ?? de.encode(options: CBOROptions())
 		guard let devicePrivateKey = de.privateKey else {
 			logger.error("Device engagement for mdoc must have the private key")
@@ -126,7 +128,7 @@ public struct SessionEncryption: Sendable {
             let nonce = try makeNonce(counter, isEncrypt: true)
             let key = try await makeKeyAgreementAndDeriveSessionKey(isEncrypt: true)
             try Task.checkCancellation()
-            try checkActive()
+            try ensureActive()
             let box = try AES.GCM.seal(data, using: key, nonce: nonce)
             guard let content = box.combined else { throw SessionEncryptionError.encryptionFailed }
             return Array(content.dropFirst(12))
@@ -145,7 +147,7 @@ public struct SessionEncryption: Sendable {
             let box = try AES.GCM.SealedBox(combined: nonce + ciphertext)
             let key = try await makeKeyAgreementAndDeriveSessionKey(isEncrypt: false)
             try Task.checkCancellation()
-            try checkActive()
+            try ensureActive()
             return Array(try AES.GCM.open(box, using: key))
         } catch {
             invalidate()
@@ -155,17 +157,21 @@ public struct SessionEncryption: Sendable {
 
     /// Terminates this session and all its copies. A fresh engagement is required to resume.
     public func invalidate() {
+        engagement.invalidateSession()
         messageCounters.withLock { $0.terminated = true }
     }
 
-    private func checkActive() throws {
+    /// Throws when this session or its originating engagement has been terminated.
+    public func ensureActive() throws {
+        guard !engagement.isSessionTerminated else { throw SessionEncryptionError.sessionTerminated }
         try messageCounters.withLock { state in
             if state.terminated { throw SessionEncryptionError.sessionTerminated }
         }
     }
 
     private func beginOperation(isEncrypt: Bool) throws -> UInt32 {
-        try messageCounters.withLock { state in
+        try ensureActive()
+        return try messageCounters.withLock { state in
             guard !state.terminated else { throw SessionEncryptionError.sessionTerminated }
             // Never hold a lock across await. Reject overlapping operations in one direction
             // so callers cannot accidentally deliver ciphertext in the wrong counter order.
