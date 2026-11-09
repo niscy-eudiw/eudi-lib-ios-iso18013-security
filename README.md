@@ -52,6 +52,25 @@ guard let readerAuthRawCBOR = docR.readerAuthRawCBOR else { continue }
 let b = try await mdocAuth.validateReaderAuth(readerAuthCBOR: readerAuthRawCBOR, readerAuthX5c: docR.readerCertificates, itemsRequestRawData: docR.itemsRequestRawData!)
 ```
 
+## CRL revocation checks on iOS
+
+Use `CheckCRLRevocation` with a CRL or mixed PKIX revocation policy:
+
+```swift
+let source = StaticListTrustSource(
+    rootCertificates: [rootCertificateDER],
+    revocationPolicy: .crlPriority,
+    crlChecker: CheckCRLRevocation()
+)
+```
+
+The checker downloads the certificate's HTTP(S) CRL distribution points and verifies
+the CRL issuer, signature, validity period and revoked serial numbers. Missing or
+unusable evidence returns `Unknown`, allowing OCSP fallback with `.crlPriority`.
+It supports complete, directly issued DER/PEM v2 CRLs with UTC time fields; delta,
+indirect, scoped CRLs and critical CRL extensions return `Unknown`. Downloads are
+synchronous; the PKIX bridge invokes the checker on a background thread.
+
 ## Dependencies (to other libs)
 
 * ASN1 DER Decoder for X.509 Certificate [ASN1Decoder](https://github.com/filom/ASN1Decoder)

@@ -27,6 +27,8 @@ struct CRL: PEMParseable, DERParseable {
 	var tbsBytes: ArraySlice<UInt8>
 	var signatureAlgorithmOID: ASN1ObjectIdentifier
 	var signatureBitBytes: ArraySlice<UInt8>
+	/// Whether this is a complete, directly issued CRL understood by our checker.
+	var supportsDirectRevocationCheck = false
 	static let defaultPEMDiscriminator: String = "X509 CRL"
 
 	struct CRLSerialInfo: DERImplicitlyTaggable, CustomStringConvertible {
@@ -74,6 +76,50 @@ struct CRL: PEMParseable, DERParseable {
 		if let n2 = nodes1Iter.next(), n2.identifier == .sequence, case .constructed(let nodes3) = n2.content {
 			revokedSerials = try nodes3.map { try CRLSerialInfo(derEncoded: $0) }
 		}
+		supportsDirectRevocationCheck = try Self.supportsDirectCheck(node)
+	}
+
+	private static func supportsDirectCheck(_ node: ASN1Node) throws -> Bool {
+		guard node.identifier == .sequence, case .constructed(let outer) = node.content else { return false }
+		let fields = Array(outer)
+		guard fields.count == 3, case .constructed(let tbs) = fields[0].content else { return false }
+		let parts = Array(tbs)
+		guard parts.count >= 5, parts[1].encodedBytes.elementsEqual(fields[1].encodedBytes) else { return false }
+		let signature = try ASN1BitString(derEncoded: fields[2])
+		guard signature.paddingBits == 0 else { return false }
+		var index = 5
+		if index < parts.count, parts[index].identifier == .sequence {
+			guard case .constructed(let entries) = parts[index].content else { return false }
+			for entry in entries {
+				guard case .constructed(let values) = entry.content else { return false }
+				let fields = Array(values)
+				guard (2...3).contains(fields.count) else { return false }
+				if fields.count == 3, try !supportsExtensions(fields[2]) { return false }
+			}
+			index += 1
+		}
+		if index < parts.count {
+			guard parts[index].identifier == ASN1Identifier(tagWithNumber: 0, tagClass: .contextSpecific),
+				  case .constructed(let values) = parts[index].content else { return false }
+			let extensions = Array(values)
+			guard extensions.count == 1, try supportsExtensions(extensions[0]) else { return false }
+			index += 1
+		}
+		return index == parts.count
+	}
+
+	private static func supportsExtensions(_ node: ASN1Node) throws -> Bool {
+		guard node.identifier == .sequence, case .constructed(let nodes) = node.content else { return false }
+		var seen = Set<ASN1ObjectIdentifier>()
+		for node in nodes {
+			let ext = try Certificate.Extension(derEncoded: node)
+			// Delta CRLs, scoped/indirect CRLs and certificateIssuer entries need additional
+			// RFC 5280 processing. Never infer a positive status from them.
+			guard seen.insert(ext.oid).inserted, !ext.critical,
+				  ext.oid != [2, 5, 29, 27], ext.oid != [2, 5, 29, 28], ext.oid != [2, 5, 29, 29]
+			else { return false }
+		}
+		return true
 	}
 
 	// OID constants for signature algorithms not publicly exposed by swift-asn1
